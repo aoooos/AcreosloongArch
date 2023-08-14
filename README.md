@@ -234,9 +234,7 @@ LoongArch包括32个通用寄存器（ `$r0` ~ `$r31` ），LA32中每个寄存�
 | `$r22`        | `$fp`       | 帧指针           | 是         |
 | `$r23`-`$r31` | `$s0`-`$s8` | 静态寄存器       | 是         |
 
-Note
-
-注意： `$r21` 寄存器在ELF psABI中保留未使用，但是在Linux内核用于保 存每CPU变量基地址。该寄存器没有ABI命名，不过在内核中称为 `$u0` 。在 一些遗留代码中有时可能见到 `$v0` 和 `$v1` ，它们是 `$a0` 和 `$a1` 的别名，属于已经废弃的用法。
+注意： `$r21` 寄存器在ELF psABI中保留未使用，但是在Linux内核用于保存每CPU变量基地址。该寄存器没有ABI命名，不过在内核中称为 `$u0` 。在 一些遗留代码中有时可能见到 `$v0` 和 `$v1` ，它们是 `$a0` 和 `$a1` 的别名，属于已经废弃的用法。
 
 **浮点寄存器**
 
@@ -250,8 +248,6 @@ Note
 | `$f0`-`$f1`   | `$fv0`-`$fv1`  | 返回值     | 否         |
 | `$f8`-`$f23`  | `$ft0`-`$ft15` | 临时寄存器 | 否         |
 | `$f24`-`$f31` | `$fs0`-`$fs7`  | 静态寄存器 | 是         |
-
-Note
 
 注意：在一些遗留代码中有时可能见到 `$fv0` 和 `$fv1` ，它们是 `$fa0` 和 `$fa1` 的别名，属于已经废弃的用法。临时寄存器也被称为调用者保存寄存器。 静态寄存器也被称为被调用者保存寄存器。
 
@@ -433,7 +429,7 @@ VA = PA + 固定偏移
 
 ### 2.1 Rust的裸机环境配置
 
-在默认情况下，Rust 尝试适配当前的系统环境，编译可执行程序。为了描述不同的环境，Rust 使 用一个称为目标三元组（target triple）的字符串。要查看当前系统的目标三元组，我们可以运行 rustc --version --verbose 。Rust 编译器尝试为当前系统的三元组编译，并假定底层有一个 类似于 Windows 或 Linux 的操作系统提供C语言运行环境——然而这将导致链接器错误。所以， 为了避免这个错误，需要另选一个底层没有操作系统的运行环境，这样的环境被称为裸机环境。 在 risc-v 平台上，rust原生就有支持相应的 riscv64gc-unknown-none-elf 裸机平台。但对于 loongArch64 平台来说，并没有相应的支持，目前只含有 loongarch64-unknown-linuxgnu``loongarch64-unknown-linux-musl 两个支持，而这个两个三元组都默认底层有linux系统支 持，因此想要编译裸机代码，就需要去掉标准库支持。 通常我们需要在项目根目录下创建 .cargo/config 文件，并写入相应的配置。在当前项目下的内 容如下: 
+在默认情况下，Rust 尝试适配当前的系统环境，编译可执行程序。为了描述不同的环境，Rust 使用一个称为目标三元组（target triple）的字符串。要查看当前系统的目标三元组，我们可以运行 rustc --version --verbose 。Rust 编译器尝试为当前系统的三元组编译，并假定底层有一个 类似于 Windows 或 Linux 的操作系统提供C语言运行环境——然而这将导致链接器错误。所以， 为了避免这个错误，需要另选一个底层没有操作系统的运行环境，这样的环境被称为裸机环境。 在 risc-v 平台上，rust原生就有支持相应的 riscv64gc-unknown-none-elf 裸机平台。但对于 loongArch64 平台来说，并没有相应的支持，目前只含有 loongarch64-unknown-linuxgnu、loongarch64-unknown-linux-musl 两个支持，而这个两个三元组都默认底层有linux系统支 持，因此想要编译裸机代码，就需要去掉标准库支持。 通常我们需要在项目根目录下创建 .cargo/config 文件，并写入相应的配置。在当前项目下的内 容如下: 
 
 ![image-20230606222134526](image-20230606222134526.png)
 
@@ -447,7 +443,7 @@ target 指定了编译的目标平台， linker 指定了所用的链接脚本�
 
 构建脚本如果会产出文件，那么这些文件需要放在统一的目录中，该目录可以通过 OUT_DIR 环境 变量来指定，构建脚本不应该修改该目录之外的任何文件！ 
 
-构建脚本可以通过 println! 输出内容跟 Cargo 进行通信：Cargo 会将每一行带有 cargo: 前缀的输 出解析为一条指令，其它的输出内容会自动被忽略。
+构建脚本可以通过 println! 输出内容跟 Cargo 进行通信：Cargo 会将每一行带有 cargo: 前缀的输出解析为一条指令，其它的输出内容会自动被忽略。
 
 ### 2.2 qemu平台支持
 
@@ -646,41 +642,25 @@ macro_rules! println {
 
 ```c++
 class Display{
-
-public:
-
-virtual void display() = 0;
-
+    public:
+    virtual void display() = 0;
 }
-
 class Screen:public Display{
-
-void display(){
-
-std::cout << "hello" << std::endl;
-
-}
-
+    void display(){
+        std::cout << "hello" << std::endl;
+    }
 }
 ```
 
 ```rust
 pub trait Display{
-
-fn display();
-
+    fn display();
 }
-
 struct Screen{};
-
 impl Display for Screen{
-
-fn display(){
-
-println!("hello");
-
-}
-
+    fn display(){
+        println!("hello");
+    }
 }
 ```
 
@@ -690,9 +670,7 @@ trait可以提供默认实现，如果不将其进行覆写，则使用的是默
 
 ```rust
 pub fn notify(item: &impl Display) {
-
-item::display();
-
+    item::display();
 }
 ```
 
@@ -702,9 +680,7 @@ item::display();
 
 ```rust
 pub fn notify<T:Display>(item: &T) {
-
-item::display();
-
+    item::display();
 }
 ```
 
@@ -720,29 +696,17 @@ trait Teaching: Learning {}
 
 ```rust
 struct Pair<T> {
-
-x: T,
-
-y: T,
-
+    x: T,
+    y: T,
 }
-
 impl<T: Display + PartialOrd> Pair<T> {
-
-fn cmp_display(&self) {
-
-if self.x >= self.y {
-
-println!("The largest member is x = {}", self.x);
-
-} else {
-
-println!("The largest member is y = {}", self.y);
-
-}
-
-}
-
+    fn cmp_display(&self) {
+        if self.x >= self.y {
+            println!("The largest member is x = {}", self.x);
+        } else {
+            println!("The largest member is y = {}", self.y);
+        }
+    }
 }
 ```
 
@@ -768,25 +732,15 @@ println!("The largest member is y = {}", self.y);
 
 ```rust
 macro_rules! create_function {
-
-// 此宏接受一个 `ident` 指示符表示的参数，并创建一个名为 `$func_name` 的函数。
-
-// `ident` 指示符用于变量名或函数名
-
-($func_name:ident) => (
-
-fn $func_name() {
-
-// `stringify!` 宏把 `ident` 转换成字符串。
-
-println!("You called {:?}()",
-
-stringify!($func_name))
-
-}
-
-)
-
+    // 此宏接受一个 `ident` 指示符表示的参数，并创建一个名为 `$func_name` 的函数。
+    // `ident` 指示符用于变量名或函数名
+    ($func_name:ident) => (
+        fn $func_name() {
+            // `stringify!` 宏把 `ident` 转换成字符串。
+            println!("You called {:?}()",
+                stringify!($func_name))
+        }
+    )
 }
 ```
 
@@ -806,15 +760,10 @@ stringify!($func_name))
 
 ```rust
 #[macro_export]
-
 macro_rules! print {
-
-($($arg:tt)*) => {{
-
-$crate::io::_print($crate::format_args!($($arg)*));
-
-}};
-
+    ($($arg:tt)*) => {{
+        $crate::io::_print($crate::format_args!($($arg)*));
+    }};
 }
 ```
 
@@ -822,19 +771,12 @@ format_args宏从传递给_print的参数中构建一个fmt::Arguments类型，�
 
 ```rust
 macro_rules! println {
-
-() => {
-
-$crate::print!("\n")
-
-};
-
-($($arg:tt)*) => {{
-
-$crate::io::_print($crate::format_args_nl!($($arg)*));
-
-}};
-
+    () => {
+        $crate::print!("\n")
+    };
+    ($($arg:tt)*) => {{
+        $crate::io::_print($crate::format_args_nl!($($arg)*));
+    }};
 }
 ```
 
@@ -855,7 +797,7 @@ println 的实现中增添了空参数的匹配项，因此当参数为空时会
 
 ### 3.1 特权级架构
 
-龙芯架构定义了 4 个运行特权等级（Privilege LeVel，简称 PLV），分别是 PLV0~PLV3。应用软件应运 行在 PLV1~PLV3 这三个非特权的等级上，从而与运行在 PLV0 级上的操作系统等系统软件隔离开。应用软件具体运行在哪个特权等级上是由系统软件在运行时决定的，应用软件对此无法确切感知。龙芯架构下，应用软件通常运行在 PLV3 级上。与risc-v不同，loongarch架构下没有所谓的M态。
+龙芯架构定义了 4 个运行特权等级（Privilege LeVel，简称 PLV），分别是 PLV0~PLV3。应用软件应运行在PLV1~PLV3 这三个非特权的等级上，从而与运行在 PLV0 级上的操作系统等系统软件隔离开。应用软件具体运行在哪个特权等级上是由系统软件在运行时决定的，应用软件对此无法确切感知。龙芯架构下，应用软件通常运行在 PLV3 级上。与risc-v不同，loongarch架构下没有所谓的M态。
 
 刚开机时，CPU 初始化为操作系统核心态对应的运行模式，执行引导程序加载操作系统。操作系统做完一系列初始化后，控制 CPU 切换到操作系统用户态对应的运行模式去执行应用程序。应用程序执行过程中，如果出现用户态对应的运行模式无法处理的事件，则 CPU 会通过异常或中断回到核心态对应的运行模式，执行操作系统提供的服务程序。操作系统完成处理后再控制 CPU 返回用户态对应的运行模式，继续运行原来的应用程序或者调度另一个应用程序。在 LoongArch 指令系统中，CPU 当前所处的运行模式由当前模式信息控制状态寄存器（CSR.CRMD）的 PLV 域的值确定，其值为 0～3 分别表示 CPU 正处于 PLV0～PLV3 四种运行模式。
 
@@ -888,15 +830,10 @@ ertn 指令用于trap上下文切换的处理返回。执行 IDLE 指令后，�
 
 异常与中断是一种打断正常的软件执行流，切换到专门的处理函数的机制。它在各种运行模式的转换中起到关键的纽带作用。比如用户态代码执行过程中，当出现对特权空间的访问，或者访问了虚实地址映射表未定义的地址，或者需要调用操作系统服务等情况时，CPU 通过发出异常来切换到核心态，进入操作系统定义的服务函数。操作系统完成处理后，返回发生异常的代码并同时切换到用户态。通常会将中断也视为一种特殊的异常，不过中断是异步的而普通异常是同步发生的，从来源看，异常可以有以下几种:
 
-- 外部事件：来自 CPU 核外部的事件，通常是中断
-- 指令执行中的错误：执行中的指令的操作码或操作数不符合要求，例如不存在的指令、除法
-- 除以 0、地址不对齐、用户态下调用核心态专有指令或非法地址空间访问等
-- 数据完整性问题：当使用 ECC 等硬件校验方式的存储器发生校验错误时，会产生异常。这个
-- 功能可以被关闭。一般不会涉及到这个处理
-- 地址转换异常：在存储管理单元需要对一个内存页进行地址转换，而硬件转换表中没有有效
-- 的转换对应项可用时，会产生地址转换异常。这部分会在开启页表后进行介绍。
-- 系统调用和陷入：由专有指令产生，其目的是产生操作系统可识别的异常，用于在保护模式
-- 下调用核心态的相关操作。这个是本节关注的重点。
+- 外部事件：来自 CPU 核外部的事件，通常是中断指令执行中的错误：执行中的指令的操作码或操作数不符合要求，例如不存在的指令、除法除以 0、地址不对齐、用户态下调用核心态专有指令或非法地址空间访问等
+- 数据完整性问题：当使用 ECC 等硬件校验方式的存储器发生校验错误时，会产生异常。这个功能可以被关闭。一般不会涉及到这个处理
+- 地址转换异常：在存储管理单元需要对一个内存页进行地址转换，而硬件转换表中没有有效的转换对应项可用时，会产生地址转换异常。这部分会在开启页表后进行介绍。
+- 系统调用和陷入：由专有指令产生，其目的是产生操作系统可识别的异常，用于在保护模式下调用核心态的相关操作。这个是本节关注的重点。
 - 浮点运算错误
 
 loongarch平台上的例外状态信息保存在ESTAT寄存器中，该寄存器记录例外的状态信息，包括所触发例外的一二级编码，以及各中断的状态。该寄存器的实现在后续小结中会有展示。
@@ -2014,6 +1951,8 @@ bitflags::bitflags! {
 
 对页表项相关的函数也做了修改，给出部分函数实现：
 
+下面代码实现了一个用于调试目的的 Rust 特性（trait），即 `fmt::Debug`，用于格式化打印一个名为 `PageTable64` 的泛型类型的实例。通过实现这个特性，可以以易于理解的格式将类型实例的字段信息打印出来，有助于调试和理解代码的执行过程。在实现中，使用了格式化器来准备和处理输出，将实例的字段和对应的值添加到输出中，最终生成可读性强的调试信息。这段代码使得通过 `println!` 或 `format!` 宏可以方便地输出 `PageTable64` 实例的内容，便于开发者检查和定位问题
+
 ```rust
 impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> fmt::Debug for PageTable64<M, PTE, IF> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -2025,6 +1964,8 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> fmt::Debug for PageTable6
 }
 ```
 
+定义了一个名为 `try_new` 的公共方法，目的是创建一个新的页表实例。这个方法是为了泛型类型 `PageTable64<M, PTE, IF>` 而设计的。该方法的核心目标是在操作系统中管理内存分页的过程中，为新的页表创建一个起始点。
+
 ```rust
 impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     /// Creates a new page table instance or returns the error.
@@ -2034,10 +1975,12 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         Ok(Self {
             root_paddr,
             intrm_tables: vec![rootfmt(&_paddr],
-            _phantom: PhantomData,
-        })
-    }
+                _phantom: PhantomData,
+            })
+        }
 ```
+
+定义了一个名为 `root_paddr` 的方法，目的是返回根页表的物理地址。
 
 ```rust
 /// Returns the physical address of the root page table.
@@ -2045,6 +1988,8 @@ pub const fn root_paddr(&self) -> PhysAddr {
     self.root_paddr
 }
 ```
+
+下面代码在内存分页管理中为页表分配一个新的页，将其清零，并返回物理地址。这对于操作系统来说是非常重要的，因为它为分页系统的构建提供了所需的内存空间。
 
 ```rust
 // Private implements.
@@ -2060,6 +2005,8 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     }
 ```
 
+`table_of` 方法的作用是接受一个物理地址作为输入，将其转换为虚拟地址，并将其解释为页表项数组的起始地址。通过返回这个数组的引用，方法提供了一种简便的方式来访问页表中的页表项，用于操作系统的内存分页管理和地址转换过程。注意，使用不安全的操作来处理指针和地址需要谨慎，因为它们可能导致内存安全问题。
+
 ```rust
 fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_ptr() as _;
@@ -2067,12 +2014,16 @@ fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
 }
 ```
 
+类似于 `table_of`，但它返回一个可变的引用，允许对页表项进行修改。通过这个方法，操作系统可以对页表进行动态的修改，以适应内存管理需求。然而，使用可变引用时要格外小心，以防止并发问题和不安全操作。
+
 ```rust
 fn table_of_mut<'a>(&self, paddr: PhysAddr) -> &'a mut [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_mut_ptr() as _;
     unsafe { core::slice::from_raw_parts_mut(ptr, ENTRY_COUNT) }
 }
 ```
+
+下述方法的作用是在内存分页管理中，基于页表项的状态，获取下一级页表的可变引用。这对于操作系统的地址转换和内存管理非常重要，因为它允许操作系统在需要时动态地修改页表，实现映射和取消映射操作。
 
 ```rust
 fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2085,6 +2036,8 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
     }
 }
 ```
+
+下述方法的作用是在内存分页管理中，基于给定的页表项，获取下一级页表的可变引用。如果页表项尚未映射，它会分配一个新的页作为下一级页表，并返回可变引用。如果页表项已经映射，它将返回现有下一级页表的可变引用，以便在需要时进行修改。这种方法在动态管理页表结构方面非常有用，用于实现操作系统的内存分页管理和地址映射。
 
 ```rust
 fn next_table_mut_or_create<'a>(&mut self, entry: &mut PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2099,19 +2052,7 @@ fn next_table_mut_or_create<'a>(&mut self, entry: &mut PTE) -> PagingResult<&'a 
 }
 ```
 
-```rust
-fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
-    let ptr = IF::phys_to_virt(paddr).as_ptr() as _;
-    unsafe { core::slice::from_raw_parts(ptr, ENTRY_COUNT) }
-}
-```
-
-```rust
-fn table_of_mut<'a>(&self, paddr: PhysAddr) -> &'a mut [PTE] {
-    let ptr = IF::phys_to_virt(paddr).as_mut_ptr() as _;
-    unsafe { core::slice::from_raw_parts_mut(ptr, ENTRY_COUNT) }
-}
-```
+综上所述，`next_table_mut` 方法的作用是在内存分页管理中，基于给定的页表项，获取下一级页表的可变引用。通过条件判断，它确保页表项的状态满足要求，然后返回对应下一级页表的引用，以供操作系统动态地管理和修改页表。这对于操作系统的地址映射和内存管理非常重要。
 
 ```rust
 fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2127,7 +2068,7 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
 
 
 
-可以用于创建、映射和管理虚拟内存与物理内存之间的映射关系。以下是主要组成部分的功能解释：
+上述用于创建、映射和管理虚拟内存与物理内存之间的映射关系。以下是主要组成部分的功能解释：
 
 1. `impl PageTable64<M, PTE, IF> { ... }`: 为 `PageTable64` 结构实现一系列方法来创建、映射和操作页表。
    - `try_new()`: 尝试创建一个新的页表实例。会分配一个根页表，并初始化一些字段。
