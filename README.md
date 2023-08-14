@@ -86,7 +86,7 @@ endef
 - 查看 `Makefile` 发现 `make run` 指令需要执行 `build` 和 `justrun`，build 指令在上面梳理完成，`justrun` 需要调用 `run_qemu` 命令，然后跳转到 `qemu.mk` 发现 qemu 构建类似 cargo 构建，不过更加简单一些，如此一来一个单地址空间（不区分内核空间和用户空间）的应用程序就编译完成。
 - 运行时首先 Arceos 先进行一些引导启动，例如在 riscv64 的环境中执行：
 
-```text
+```rust
 #[naked]
 #[no_mangle]
 #[link_section = ".text.boot"]
@@ -134,9 +134,7 @@ unsafe extern "C" fn _start() -> ! {
 }
 ```
 
-随后跳转到 `axruntime` 中的 `rust_main` 中运行，`rust_main` 经过一系列条件初始化后，执行 `main()`，由于这个 `main` 实在应用程序定义的，应当进行符号连接并跳转（由于是单地址空间，所以不须上下文切换）。
-
-随后开始执行用户程序，用户程序通过 `libax` 的 API 进行执行，应用程序在内核态执行，无需进行 syscall 与上下文切换，效率更高。
+随后跳转到 `axruntime` 中的 `rust_main` 中运行，`rust_main` 经过一系列条件初始化后，执行 `main()`，由于这个 `main` 实在应用程序定义的，应当进行符号连接并跳转（由于是单地址空间，所以不须上下文切换）。随后开始执行用户程序，用户程序通过 `libax` 的 API 进行执行。
 
 ### 1.2 arceos移植到loongarch架构所需环境
 
@@ -150,7 +148,7 @@ unsafe extern "C" fn _start() -> ! {
 
 这里给出了rust源码下载和编译的命令，其完整构建过程可参考https://github.com/aoooos/rust-toolchain-for-loongarch64。
 
-```
+```rust
 set -ex
 
 git clone https://github.com/aoooos/rust.git
@@ -167,7 +165,7 @@ cp ../config.toml ./
 
 qemu 是一个开源的虚拟化软件，它可以模拟多种硬件架构和设备，从而使您能够在一个平台上运行不同的操作系统和应用程序。其完整构建过程可参考https://github.com/aoooos/qemu-for-loongarch-arceos。
 
-##### 安装依赖
+**安装依赖**
 
 在下载安装qemu前，需要先安装相关的动态库。
 
@@ -176,7 +174,7 @@ apt update
 apt install gcc cmake g++ build-essential pkg-config zlib1g-dev libglib2.0-dev meson libpixman-1-dev ninja-build libfdt-dev
 ```
 
-##### 源码构建
+**源码构建**
 
 ```
 git clone https://github.com/foxsen/qemu.git
@@ -194,10 +192,6 @@ make install
 #### 1.2.4 GCC工具链
 
 为LoongArch提供gdb和debug功能。其环境构建命令分别在https://github.com/aoooos/gdb-for-loongarch和https://github.com/aoooos/debug-tools-for-loongarch-arceos中提供。
-
-
-
-<div STYLE="page-break-after: always;"></div>
 
 ### 1.3 loongarch介绍
 
@@ -244,7 +238,7 @@ Note
 
 注意： `$r21` 寄存器在ELF psABI中保留未使用，但是在Linux内核用于保 存每CPU变量基地址。该寄存器没有ABI命名，不过在内核中称为 `$u0` 。在 一些遗留代码中有时可能见到 `$v0` 和 `$v1` ，它们是 `$a0` 和 `$a1` 的别名，属于已经废弃的用法。
 
-##### 浮点寄存器
+**浮点寄存器**
 
 当系统中存在FPU时，LoongArch有32个浮点寄存器（ `$f0` ~ `$f31` ）。在LA64 的CPU核上，每个寄存器均为64位宽。
 
@@ -261,7 +255,7 @@ Note
 
 注意：在一些遗留代码中有时可能见到 `$fv0` 和 `$fv1` ，它们是 `$fa0` 和 `$fa1` 的别名，属于已经废弃的用法。临时寄存器也被称为调用者保存寄存器。 静态寄存器也被称为被调用者保存寄存器。
 
-##### 向量寄存器
+**向量寄存器**
 
 LoongArch现有两种向量扩展：
 
@@ -272,7 +266,7 @@ LSX使用 `$v0` ~ `$v31` 向量寄存器，而LASX则使用 `$x0` ~ `$x31` 。
 
 浮点寄存器和向量寄存器是复用的，比如：在一个实现了LSX和LASX的核上， `$x0` 的 低128位与 `$v0` 共用， `$v0` 的低64位与 `$f0` 共用，其他寄存器依此类推。
 
-##### 控制状态寄存器
+**控制状态寄存器**
 
 控制状态寄存器只能在特权模式（PLV0）下访问:
 
@@ -291,7 +285,7 @@ LSX使用 `$v0` ~ `$v31` 向量寄存器，而LASX则使用 `$x0` ~ `$x31` 。
 
 #### 1.3.2 基础指令集
 
-##### 指令格式
+**指令格式**
 
 LoongArch的指令字长为32位，一共有9种基本指令格式（以及一些变体）:
 
@@ -309,7 +303,7 @@ LoongArch的指令字长为32位，一共有9种基本指令格式（以及一�
 
 Opcode是指令操作码，Rj和Rk是源操作数（寄存器），Rd是目标操作数（寄存器），Ra是 4R-type格式特有的附加操作数（寄存器）。I8/I12/I14/I16/I21/I26分别是8位/12位/14位/ 16位/21位/26位的立即数。其中较长的21位和26位立即数在指令字中被分割为高位部分与低位 部分，所以你们在这里的格式描述中能够看到I21L/I21H和I26L/I26H这样带后缀的表述。
 
-##### 指令列表
+**指令列表**
 
 为了简便起见，我们在此只罗列一下指令名称（助记符）。
 
@@ -425,10 +419,6 @@ VA = PA + 固定偏移
 
 <div STYLE="page-break-after: always;"></div>
 
-
-
-<div STYLE="page-break-after: always;"></div>
-
 ## 2 Hello World
 
 在这一章中，介绍了如何进入使用Rust编写内核代码的世界以及在Arceos中helloworld的字符打印。此外，本章还将简单介绍rust编程语言中的两个很重要的特性，Trait和macro。
@@ -447,7 +437,7 @@ VA = PA + 固定偏移
 
 ![image-20230606222134526](image-20230606222134526.png)
 
-target 指定了编译的目标平台， linker 指定了所用的链接脚本，虽然这里指定了配置，但后续 介绍的 build.rs 会修改相关的规则才能编译裸机代码。 这里出现的一个问题是若像 rCore 官方一样在 config 文件指定链接脚本的话似乎并不会起作用， 需要 build.rs 的帮助。因此上面的 linker 命令也是多余命令 
+target 指定了编译的目标平台， linker 指定了所用的链接脚本，虽然这里指定了配置，但后续 介绍的 build.rs 会修改相关的规则才能编译裸机代码。 
 
 **Rust的build.rs文件** 
 
@@ -471,61 +461,43 @@ QEMU （Quick Emulator）是业界主流的设备仿真模拟软件。可以在�
 
 **首先在axconfig中对计算机系统的硬件参数和属性进行配置**。在modules/axconfig/src/platform/qemu-virt-loongarch64.toml中描述如下：
 
-```
-## Architecture identifier.
-
+```rust
+# Architecture identifier.
 arch = "loongarch64"
-
-## Platform identifier.
-
+# Platform identifier.
 platform = "qemu-virt-loongarch64"
 
-## Base address of the whole physical memory.
-
-phys-memory-base = "0x1be0_0000"
-
-## Size of the whole physical memory.
-
-phys-memory-size = "0x800_0000"     ## 128M
-
-## Base physical address of the kernel image.
-
-kernel-base-paddr = "0x1c00_0000"
-
-## Base virtual address of the kernel image.
-
-kernel-base-vaddr = "0x8000_0000_1c00_0000"
-
-## Linear mapping offset, for quick conversions between physical and virtual
-
-## addresses.
-
-phys-virt-offset = "0x8000_0000_0000_0000"
-
-## MMIO regions with format (`base_paddr`, `size`).
-
+# Base address of the whole physical memory.
+phys-memory-base = "0x0"
+# Size of the whole physical memory.
+phys-memory-size = "0x800_0000"     # 128M
+# Base physical address of the kernel image.
+kernel-base-paddr = "0x000_1000"
+# Base virtual address of the kernel image.
+kernel-base-vaddr = "0x9000_0000_0000_1000"
+# Linear mapping offset, for quick conversions between physical and virtual
+# addresses.
+phys-virt-offset =  "0x9000_0000_0000_0000"
+# MMIO regions with format (`base_paddr`, `size`).
 mmio-regions = [
-    ["0xfec0_0000", "0x1000"],      ## IO APIC
-    ["0xfed0_0000", "0x1000"],      ## HPET
-    ["0xfee0_0000", "0x1000"],      ## Local APIC
+    ["0xfec0_0000", "0x1000"],      # IO APIC
+    ["0xfed0_0000", "0x1000"],      # HPET
+    ["0xfee0_0000", "0x1000"],      # Local APIC
 ]
-
-## VirtIO MMIO regions with format (`base_paddr`, `size`).
-
+# VirtIO MMIO regions with format (`base_paddr`, `size`).
 virtio-mmio-regions = []
 
-## Timer interrupt frequency in Hz.
-
-timer_frequency = "10_000_000"      ## 10MHz
+# Timer interrupt frequency in Hz.
+timer_frequency = "100_000_000"      # 10MHz
 ```
 
 - `arch = "loongarch64"`：指定了计算机系统的体系结构标识为 "loongarch64"。
 - `platform = "qemu-virt-loongarch64"`：指定了计算机系统的平台标识为 "qemu-virt-loongarch64"。
-- `phys-memory-base = "0x1be0_0000"`：指定了整个物理内存的基地址为 0x1be0_0000。
+- `phys-memory-base = "0x0"`：指定了整个物理内存的基地址为 0x0。
 - `phys-memory-size = "0x800_0000"`：指定了整个物理内存的大小为 0x800_0000，即 128M。
-- `kernel-base-paddr = "0x1c00_0000"`：指定了内核镜像的基础物理地址为 0x1c00_0000。
-- `kernel-base-vaddr = "0x8000_0000_1c00_0000"`：指定了内核镜像的基础虚拟地址为 0x8000_0000_1c00_0000。
-- `phys-virt-offset = "0x8000_0000_0000_0000"`：指定了线性映射偏移量，用于在物理地址和虚拟地址之间进行快速转换。
+- `kernel-base-paddr = "0x000_1000"`：指定了内核镜像的基础物理地址为 0x000_1000。
+- `kernel-base-vaddr = "0x9000_0000_0000_1000"`：指定了内核镜像的基础虚拟地址为 0x9000_0000_0000_1000。
+- `phys-virt-offset = "0x9000_0000_0000_0000"`：指定了线性映射偏移量，用于在物理地址和虚拟地址之间进行快速转换。
 - `mmio-regions`：定义了一些 MMIO（内存映射输入/输出）区域，每个区域由基地址和大小组成。在这个例子中，有三个 MMIO 区域：IO APIC、HPET 和 Local APIC。
 - `virtio-mmio-regions`：定义了一些 VirtIO MMIO 区域，但在这个例子中是空的。
 - `timer_frequency = "10_000_000"`：指定了计时器中断的频率为 10,000,000 Hz，即 10MHz。
@@ -562,7 +534,7 @@ PIC 只用于单处理器，对于如今的多核多处理器时代，PIC 无能
 
 **最后，在modules/axhal/src/platform/mod.rs中使用`cfg_if`宏**，该宏可以根据条件选择执行不同的代码块。
 
-```
+```rust
 if #[cfg(all(
         target_arch = "loongarch64",
         feature = "platform-qemu-virt-loongarch64"
@@ -580,7 +552,7 @@ if #[cfg(all(
 
 无论采用何种指令系统的处理器，复位后的第一条指令都会从一个预先定义的特定地址取回。处理器的执行就从这条指令开始。处理器的启动过程，实际上就是一个特定程序的执行过程。这个程序我们称之为固件，又称为 BIOS（Basic Input Output System，基本输入输出系统）。对于loongArch ，处理器复位后的第一条指令将固定从地址 0x1C000000 的位置获取。这个地址需要对应一个能够给处理器核提供指令的设备，这个设备以前是各种 ROM，现在通常是闪存（Flash）。从获取第一条指令开始，计算机系统的启动过程也就开始了。在 risc-v 体系结构上，通常这个地址是0x80200000.在启动过程中，计算机需要对包括处理器核、内存、外设等在内的各个部分分别进行初始化，再对必要的外设进行驱动管理。
 
-RISC-V架构中，存在着定义于操作系统之下的运行环境。这个运行环境不仅将引导启动RISC-V下的操作系统， 还将常驻后台，为操作系统提供一系列二进制接口，以便其获取和操作硬件信息。RISC-V给出了此类环境和二进制接口的规范，称为“操作系统二进制接口”，即“SBI”。 RustSbi 作为其中一种实现，在当前 rCore 中使用。其位于 risc-v 定义的M态下，比操作系统的级别更高，对机器有更大的权限。机器上电时，SBI将配置环境，准备设备树，最终将引导启动操作系统。操作系统需要访问硬件或者特殊的功能，这时候就需要通过ecall指令陷入M层的SBI运行时，由SBI完成这些功能再提供。
+RISC-V架构中，存在着定义于操作系统之下的运行环境。这个运行环境不仅将引导启动RISC-V下的操作系统， 还将常驻后台，为操作系统提供一系列二进制接口，以便其获取和操作硬件信息。RISC-V给出了此类环境和二进制接口的规范，称为“操作系统二进制接口”，即“SBI”，RustSbi 作为其中一种实现。其位于 risc-v 定义的M态下，比操作系统的级别更高，对机器有更大的权限。机器上电时，SBI将配置环境，准备设备树，最终将引导启动操作系统。操作系统需要访问硬件或者特殊的功能，这时候就需要通过ecall指令陷入M层的SBI运行时，由SBI完成这些功能再提供。
 
 在 loongArch 或者 x86 这些架构下，通常上述工作由BIOS完成,现在一般是UEFI.BIOS和UEFI提供了整个主板，包括主板上外插的设备的软件抽象，通过探测，枚举，找到系统所有的硬件信息，再通过几组详细定义好的接口，把这些信息抽象封装后传递给操作系统，这些信息包括SMBIOS，ACPI表等，通过这层映射，操作系统就能做到在不修改的前提下直接运行在新的硬件上。通常来说，UEFI不会像SBI一样一直位于后台运行，在内核代码中，一般只会去读取UEFI提供的信息而不主动调用其实现的一些功能。
 
@@ -630,9 +602,7 @@ SYM_CODE_START(kernel_entry) # kernel entry point
 SYM_CODE_END(kernel_entry)
 ```
 
-乍一看怎么才第一章就已经开始这么难了，但实际上上述的代码我们可以在后续章节中再使用，这里我们将会使用另外一种更简单的方式。
-
-在内存使用上，BIOS实现了虚拟地址和物理地址相等的一个映射。为了简单起见，第一章的内核利用了这个映射，跳过了常规的汇编初始化代码。在实际的内核代码中，内核将会接管物理内存和虚拟内存，不能一直依赖BIOS建立的映射，当然也要注意使用的内存不会破坏BIOS用于传递参数的区域。因此这里可以直接开始编写rust代码。
+### 2.4 字符打印
 
 **helloworld**
 
@@ -648,8 +618,6 @@ fn main() {
 
 在linker文件中，指定了入口为main函数，因此这里关闭了rust的函数名重整，这样才能正确链接到符号。
 
-### 2.4 字符打印
-
 首先在helloworld.rs文件的main函数中，
 
 ```rust
@@ -658,7 +626,7 @@ fn main() {
 }
 ```
 
-调用了libax模块中的函数println！
+调用了libax模块中的函数println!()
 
 ```rust
 /// Prints to the standard output, with a newline.
@@ -931,7 +899,7 @@ ertn 指令用于trap上下文切换的处理返回。执行 IDLE 指令后，�
 - 下调用核心态的相关操作。这个是本节关注的重点。
 - 浮点运算错误
 
-loongarch平台上的例外状态信息保存在ESTAT寄存器中，该寄存器记录例外的状态信息，包括所触发例外的一二级编码，以及各中断的状态。
+loongarch平台上的例外状态信息保存在ESTAT寄存器中，该寄存器记录例外的状态信息，包括所触发例外的一二级编码，以及各中断的状态。该寄存器的实现在后续小结中会有展示。
 
 ![image-20230813171722205](image-20230813171722205.png)
 
@@ -939,7 +907,7 @@ loongarch平台上的例外状态信息保存在ESTAT寄存器中，该寄存器
 
 ### 3.4 中断
 
-LoongArch 指令系统支持中断线的中断传递机制，共定义了 13 个中断，分别是：1 个核间中断（IPI），1个定时器中断（TI），1个性能监测计数溢出中断（PMI），8个外部硬中断（HWI0~HWI7），2个软 中断（SWI0~SWI1）。其中所有中断线上的中断信号都采用电平中断，且都是高电平有效。当有中断发生时，这种高电平有效中断方式输入给处理器的中断线上将维持高电平状态直至中断被处理器响应处理。无论中断源来自处理器核外部还是内部，是硬件还是软件置位，这些中断信号都被不间断地采样并记录到 CSR.ESTAT 中 IS 域的对应比特位上。这些中断均为可屏蔽中断，除了 CSR.CRMD中的全局中断使能位 IE 外，每个中断各自还有其局部中断使能控制位，在 CSR.ECFG 的 LIE 域中。当CSR.ESTAT 中 IS 域的某位为 1 且对应的局部中断使能和全局中断使能均有效时，处理器就将响应该中断，并进入中断处理程序入口处开始执行。
+LoongArch 指令系统支持中断线的中断传递机制，共定义了 13 个中断，分别是：1 个核间中断（IPI），1个定时器中断（TI），1个性能监测计数溢出中断（PMI），8个外部硬中断（HWI0~HWI7），2个软中断（SWI0~SWI1）。其中所有中断线上的中断信号都采用电平中断，且都是高电平有效。当有中断发生时，这种高电平有效中断方式输入给处理器的中断线上将维持高电平状态直至中断被处理器响应处理。无论中断源来自处理器核外部还是内部，是硬件还是软件置位，这些中断信号都被不间断地采样并记录到 CSR.ESTAT 中 IS 域的对应比特位上。这些中断均为可屏蔽中断，除了 CSR.CRMD中的全局中断使能位 IE 外，每个中断各自还有其局部中断使能控制位，在 CSR.ECFG 的 LIE 域中。当CSR.ESTAT 中 IS 域的某位为 1 且对应的局部中断使能和全局中断使能均有效时，处理器就将响应该中断，并进入中断处理程序入口处开始执行。
 
 在支持多个中断源输入的指令系统中，需要规范在多个中断同时触发的情况下，处理器是否区别不同来源的中断的优先级。当采用非向量中断模式的时候，处理器通常不区别中断优先级，此时若需要对中断进行优先级处理，可以通过软件方式予以实现，其通常的实现方案是：
 
@@ -960,11 +928,60 @@ LoongArch 指令系统支持中断线的中断传递机制，共定义了 13 个
 
 ![image-20230813173523733](image-20230813173523733.png)
 
+```rust
+impl Ecfg {
+    pub fn get_val(&self) -> usize {
+        self.bits
+    }
+    pub fn set_val(&mut self, val: usize) -> &mut Self {
+        self.bits = val;
+        self
+    }
+    pub fn get_lie_with_index(&self, index: usize) -> bool {
+        // 中断位于0-12位,每一位代表一个局部中断
+        assert!(index < 13);
+        self.bits.get_bit(index)
+    }
+    pub fn set_lie_with_index(&mut self, index: usize, val: bool) -> &mut Self {
+        // 中断位于0-12位,每一位代表一个局部中断
+        assert!(index < 13);
+        self.bits.set_bit(index, val);
+        self
+    }
+    // 例外处理中断入口的间距
+    // 16-18位
+    // 当此值为0 时，例外处理中断入口是同一个地址
+    // 不为0时，每个异常有自己的中断入口
+    pub fn get_vs(&self) -> usize {
+        self.bits.get_bits(16..19)
+    }
+    pub fn set_vs(&mut self, value: usize) -> &mut Self {
+        self.bits.set_bits(16..19, value);
+        self
+    }
+}
+```
+
 **ERA**
 
 该寄存器记录普通例外处理完毕之后的返回地址。当触发例外时，如果例外类型既不是TLB重填例外也不是机器错误例外，则触发例外的指令的PC将被记录在该寄存器中。
 
 ![image-20230813173639341](image-20230813173639341.png)
+
+```rust
+impl Era {
+    pub fn set_pc(&mut self, pc: usize) -> &mut Self {
+        self.bits = pc;
+        self
+    }
+    pub fn get_pc(&self) -> usize {
+        // 返回pc
+        self.bits
+    }
+}
+```
+
+
 
 ### 3.6 LoongArch寄存器
 
@@ -989,8 +1006,6 @@ LoongArch包括32个通用寄存器（ `$r0` ~ `$r31` ），LA32中每个寄存�
 | `$r22`        | `$fp`       | 帧指针           | 是         |
 | `$r23`-`$r31` | `$s0`-`$s8` | 静态寄存器       | 是         |
 
-Note
-
 注意： `$r21` 寄存器在ELF psABI中保留未使用，但是在Linux内核用于保 存每CPU变量基地址。该寄存器没有ABI命名，不过在内核中称为 `$u0` 。在 一些遗留代码中有时可能见到 `$v0` 和 `$v1` ，它们是 `$a0` 和 `$a1` 的别名，属于已经废弃的用法。
 
 **浮点寄存器**
@@ -1005,8 +1020,6 @@ Note
 | `$f0`-`$f1`   | `$fv0`-`$fv1`  | 返回值     | 否         |
 | `$f8`-`$f23`  | `$ft0`-`$ft15` | 临时寄存器 | 否         |
 | `$f24`-`$f31` | `$fs0`-`$fs7`  | 静态寄存器 | 是         |
-
-Note
 
 注意：在一些遗留代码中有时可能见到 `$fv0` 和 `$fv1` ，它们是 `$fa0` 和 `$fa1` 的别名，属于已经废弃的用法。临时寄存器也被称为调用者保存寄存器。 静态寄存器也被称为被调用者保存寄存器。
 
@@ -1036,7 +1049,8 @@ loongArch 的函数调用规范包括了整型调用规范，浮点调用规范�
 
 **BADV**：出错虚地址
 
-- 该寄存器用于触发地址错误相关例外时，记录出错的虚地址。此类例外包括:·
+该寄存器用于触发地址错误相关例外时，记录出错的虚地址。此类例外包括:
+
 - 取指地址错例外(ADEF)，此时记录的是该指令的PC。
 - load/store操作地址错例外(ADEM)
 - 地址对齐错例外(ALE)
@@ -1051,11 +1065,33 @@ loongArch 的函数调用规范包括了整型调用规范，浮点调用规范�
 
 ![image-20230813175030200](image-20230813175030200.png)
 
+```rust
+impl Badv {
+    pub fn get_value(&self) -> usize {
+        self.bits
+    }
+}
+```
+
 **EENTRY**：例外入口地址
 
 该寄存器用于配置普通例外和中断的入口地址。
 
 ![image-20230813175128771](image-20230813175128771.png)
+
+```rust
+impl Eentry {
+    pub fn get_eentry(&self) -> usize {
+        // 12位以后,以页对齐
+        self.bits
+    }
+    pub fn set_eentry(&mut self, eentry: usize) -> &mut Self {
+        assert!(eentry & 0xfff == 0);
+        self.bits = eentry;
+        self
+    }
+}
+```
 
 **SAVE**：数据保存
 
@@ -1085,7 +1121,7 @@ $$
 4. 处理异常。跳转到对应异常处理程序进行异常处理。也就是下文的trap_handler函数
 5. 恢复执行状态并返回。在异常处理返回前，软件需要先将前面第 3 个步骤中保存的执行状态从栈中恢复出来，在最后执行异常返回指令。之所以要采用专用的异常返回指令，是因为该指令需要原子地完成恢复权限等级、恢复中断使能状态、跳转至异常返回目标等多个操作。在 LoongArch中，异常返回的指令是 ERTN，该指令会将 CSR.PRMD 的 PPLV 和 PIE 域分别回填至 CSR.CRMD 的 PLV 和IE 域，从而使得 CPU 的权限等级和全局中断响应状态恢复到异常发生时的状态，同时该指令还会将 CSR.ERA 中的值作为目标地址跳转过去。
 
-### 3.8 trap实现
+### 3.8 trap实现（待完善）
 
 检查初始化后的硬件是否正确：
 
@@ -1242,7 +1278,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame) {
 }
 ```
 
-
+<div STYLE="page-break-after: always;"></div>
 
 
 
@@ -1255,9 +1291,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame) {
 - 时钟中断相关寄存器
 - 计时器
 
-
-
-
+<div STYLE="page-break-after: always;"></div>
 
 ### 4.1 任务切换
 
@@ -1313,7 +1347,7 @@ TaskContext上下文切换：
 }
 ```
 
-
+这段代码使用内联汇编（asm! 宏）编写了一个汇编语言函数 `context_switch`，用于在两个任务的上下文之间进行切换。
 
 ```rust
 #[naked]
@@ -1355,7 +1389,7 @@ unsafe extern "C" fn context_switch(_current_task: &mut TaskContext, _next_task:
 }
 ```
 
-### 4.2 时钟（注意，实现代码部分需要做较大调整）
+### 4.2 时钟（注意，实现代码部分需要做调整）
 
 在多道程序和协作式调度的基础上，应用程序可以各自获得处理器的使用权了，但这仍然需要应用程序的编写者主动地去让出处理器，如果某个应用程序不主动让出，那么其它的任务将永远不会获得使用权。为了使得操作系统对应用程序的管理更加公平合理，需要完成
 
@@ -1462,11 +1496,11 @@ counter
 
 ### 4.5 yield（待写）
 
+<div STYLE="page-break-after: always;"></div>
 
 
 
-
-## 5 memtest
+## 5 Memtest
 
 本章内容是在loongarch平台上遇到的与大量硬件相关的第一次尝试，这一章中，不仅需要了解loongarch上大量的寄存器以及其功能，并且需要知道risc-v和其在地址空间管理上的差别，比如映射地址空间，以及手动管理TLB等。而且由于开启了页表的缘故，debug的过程也可能比较艰难，因此需要细细品读相关的细节。
 
@@ -1478,9 +1512,7 @@ counter
 - 完成TLB重填和页修改异常的处理
 - 介绍如何配置多级页表
 
-
-
-
+<div STYLE="page-break-after: always;"></div>
 
 ### 5.1 寄存器设计
 
@@ -1919,7 +1951,7 @@ loongarch处理器与risc-v处理器不同之处在于risc-v是根据satp寄存�
 
 本实验会采用该四级页表完成。
 
-### 5.5 多级页表实现
+### 5.5 多级页表实现（看一下代码）
 
 通过CPUCFG指令获取系统配置后，在将页大小规定位4kb后，将会构成四级页表。
 
@@ -1929,8 +1961,6 @@ loongarch处理器与risc-v处理器不同之处在于risc-v是根据satp寄存�
 /// The size of a 4K page (4096 bytes).
 pub const PAGE_SIZE_4K: usize = 0x1000;
 ```
-
-
 
 在页表项的实现中，由于不同平台差异较大，因此许多结构需要重新定义，对于页表项中的标志位，重新定义如下:
 
@@ -2009,16 +2039,12 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     }
 ```
 
-
-
 ```rust
 /// Returns the physical address of the root page table.
 pub const fn root_paddr(&self) -> PhysAddr {
     self.root_paddr
 }
 ```
-
-​     
 
 ```rust
 // Private implements.
@@ -2034,9 +2060,6 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     }
 ```
 
-
-​           
-
 ```rust
 fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_ptr() as _;
@@ -2044,18 +2067,12 @@ fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
 }
 ```
 
-
-​           
-
 ```rust
 fn table_of_mut<'a>(&self, paddr: PhysAddr) -> &'a mut [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_mut_ptr() as _;
     unsafe { core::slice::from_raw_parts_mut(ptr, ENTRY_COUNT) }
 }
 ```
-
-
-​           
 
 ```rust
 fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2068,9 +2085,6 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
     }
 }
 ```
-
-
-​           
 
 ```rust
 fn next_table_mut_or_create<'a>(&mut self, entry: &mut PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2085,10 +2099,6 @@ fn next_table_mut_or_create<'a>(&mut self, entry: &mut PTE) -> PagingResult<&'a 
 }
 ```
 
-​            
-
-​            
-
 ```rust
 fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_ptr() as _;
@@ -2096,18 +2106,12 @@ fn table_of<'a>(&self, paddr: PhysAddr) -> &'a [PTE] {
 }
 ```
 
-
-​         
-
 ```rust
 fn table_of_mut<'a>(&self, paddr: PhysAddr) -> &'a mut [PTE] {
     let ptr = IF::phys_to_virt(paddr).as_mut_ptr() as _;
     unsafe { core::slice::from_raw_parts_mut(ptr, ENTRY_COUNT) }
 }
 ```
-
-
-​            
 
 ```rust
 fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
@@ -2143,8 +2147,6 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
 3. `impl Drop for PageTable64<M, PTE, IF> { ... }`: 在页表结构被释放时，释放页表占用的内存。
 
 这段代码实现了一个通用的64位页表结构，可以用于操作系统中的虚拟内存管理。它提供了映射、查询、取消映射、遍历等操作，并支持分配和释放页表等功能。这是操作系统中重要的组成部分，用于实现虚拟地址到物理地址的映射和管理。
-
-
 
 ### 5.6 地址空间（待写）
 
