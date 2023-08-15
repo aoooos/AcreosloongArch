@@ -263,15 +263,15 @@ graph TD
 axhal
 ```
 
-在 ArceOS 中，axhal 组件提供了一层针对不同硬件平台的硬件封装，它为指定的操作平台进行引导和初始化过程，并提供对硬件的操作。例如 modules/axhal/src/platform/qemu_virt_riscv/console.rs 里面提供了对字符输出的封装，程序可以直接调用其中的 putchar 函数进行字符的输出，而不是一次又一次地使用 sbi 这样汇编级别的代码进行输出。
+在 ArceOS 中，axhal 组件提供了一层针对不同硬件平台的硬件封装，它为指定的操作平台进行引导和初始化过程，并提供对硬件的操作。例如 modules/axhal/src/platform/qemu_virt_loongarch64/console.rs 里面提供了对字符输出的封装，程序可以直接调用其中的 putchar 函数进行字符的输出，而不是一次又一次地使用 sbi 这样汇编级别的代码进行输出。
 
 其实在 ArceOS 里面，putchar函数经过了许多层的封装已经变成类似于 print 这样方便用户使用的函数了，但其实 helloworld 输出的本质还是调用 axhal 组件的putchar函数，接下来的内容将介绍如何抛掉方便用户调用的封装，通过对 axhal 代码的一些修改，来直观地感受一下系统启动和调用 axhal 所提供的 putchar 函数进行输出的流程。
 
 **动手尝试**
 
-以 qemu_virt_riscv 平台为例， 首先关注 modules/axhal/src/platform/qemu_virt_riscv/boot.rs 这个文件， 其中的 _start() 函数被链接到 ".text.boot" 段， 作为 ArceOS 运行的第一段代码。具体的不同段的分配可以查看 modules/axhal/linker.lds.S 文件。
+以 qemu_virt_loongarch64 平台为例， 首先关注 modules/axhal/src/platform/qemu_virt_loongarch64/boot.rs 这个文件， 其中的 _start() 函数被链接到 ".text.boot" 段， 作为 ArceOS 运行的第一段代码。具体的不同段的分配可以查看 modules/axhal/linker.lds.S 文件。
 
-接下来尝试在里面直接调用 ArceOS 为我们封装好的 sbi 函数进行输出，首先添加 console_putchar 函数方便输出程序想要输出的结果。
+接下来尝试在里面直接调用 ArceOS 为我们封装好的函数进行输出，首先添加 console_putchar 函数方便输出程序想要输出的结果。
 
 ```rust
 unsafe fn console_putchar() {
@@ -281,35 +281,45 @@ unsafe fn console_putchar() {
   putchar(76); // 打印"L“
   putchar(76); // 打印"L“
   putchar(79); // 打印"O“
-  // 下面可以输出任何想要的内容， 只需更改参数即可
 }
 ```
 
-然后需要在代码中加入对 console_putchar 函数的调用， 并在初始化页表之后， 初始化 mmu 之前执行 console_putchar 函数。 并且添加
+然后需要在代码中加入对 console_putchar 函数的调用，并在初始化页表和TLB之后执行 console_putchar 函数：
+```rust
+bl {init_mmu}
 
+# Enable PG 
+li.w		$t0, 0xb0		# PLV=0, IE=0, PG=1
+csrwr		$t0, 0x0        # LOONGARCH_CSR_CRMD
+li.w		$t0, 0x00		# PLV=0, PIE=0, PWE=0
+csrwr		$t0, 0x1        # LOONGARCH_CSR_PRMD
+li.w		$t0, 0x00		# FPE=0, SXE=0, ASXE=0, BTE=0
+csrwr		$t0, 0x2        # LOONGARCH_CSR_EUEN
+            
+bl {init_tlb}
+bl {console_putchar}
+```
+ 并且添加
+```rust
+use crate::console::putchar;
+```
+以及
 ```rust
 console_putchar = sym console_putchar,
 ```
 
-这一行， 以便汇编代码调用之前写好的console_putchar函数
+这两行， 以便汇编代码调用之前写好的console_putchar函数。
 
-然后在初始化页表之后和初始化mmu之前调用输出：
-
-```rust
-call {init_boot_page_table}
-call {console_putchar}
-call {init_mmu}
-```
-
-此时只需执行:
+此时只需执行：
 
 ```shell
-make ARCH=riscv64 A=apps/helloworld run
+make ARCH=loongarch64 A=apps/helloworld run
 ```
 
-如无意外， 在打印 ArceOS 的 LOGO 之前看到了调用 putchar 函数进行的输出 "HELLO FROM SBI"， 当然，每个字符的输出只需要在 console_putchar 中自行添加即可。
+如无意外， 在打印 ArceOS 的 LOGO 之前看到了调用 putchar 函数进行的输出 "HELLO"， 当然，每个字符的输出只需要在 console_putchar 中自行添加即可。
+![HELLO](<image/image-2023-08-15 19.51.34.png>)
 
-至此，已经完成了从系统引导到输出的最小流程， 而且从开机到输出这个过程不依赖于 axhal 外的任一组件，并且是可以在真实的硬件环境中(例如 CV1811H 的 riscv 开发板)进行输出的， 这也体现了 ArceOS 的设计思路， 只需要复用这一个模块，就能很方便地对硬件进行操作了。
+至此，已经完成了从系统引导到输出的最小流程， 而且从开机到输出这个过程不依赖于 axhal 外的任一组件，这也体现了 ArceOS 的设计思路，只需要复用这一个模块，就能很方便地对硬件进行操作了。
 
 **2. helloworld 程序基于 axhal 组件实现输出**
 
@@ -322,11 +332,11 @@ graph TD
 helloworld --> axhal
 ```
 
-在boot.rs 中的汇编代码最后有一段跳转到 entry 的代码， 目前来说，ArceOS 运行到这里之后，就会跳转到 rust_entry 函数（在axhal/src/platform/qemu_virt_riscv/mod.rs 文件中），这个函数会执行一些初始化流程，然后调用rust_main 函数（在 modules/axruntime/src/lib.rs 文件中）， rust_main 函数会根据选择的 feature 进行初始化的流程， 最后会调用应用程序的 main 函数。
+在 boot.rs 中的汇编代码最后有一段跳转到 entry 的代码， 目前来说，ArceOS 运行到这里之后，就会跳转到 rust_entry 函数（在axhal/src/platform/qemu_virt_loongarch64/mod.rs 文件中），这个函数会执行一些初始化流程，然后调用rust_main 函数（在 modules/axruntime/src/lib.rs 文件中）， rust_main 函数会根据选择的 feature 进行初始化的流程， 最后会调用应用程序的 main 函数。
 
-为避免引入过多组件， 可以直接将 axhal/src/platform/qemu_virt_riscv/mod.rs 里面 rust_entry 中调用的 rust_main() 函数换成应用程序的 main 函数(记得要在上面 extern 引用 main 函数)， 并加上一行 self::misc::terminate()， 方便 arceos 运行完程序后终止，以防止ArceOS卡死不能正常退出（目前退出的功能依赖于下一部分提到的axruntime组件）。
+为避免引入过多组件， 可以直接将 axhal/src/platform/qemu_virt_loongarch64/mod.rs 里面 rust_entry 中调用的 rust_main() 函数换成应用程序的 main 函数(记得要在上面 extern 引用 main 函数)。
 
-axhal/src/platform/qemu_virt_riscv/mod.rs
+axhal/src/platform/qemu_virt_loongarch64/mod.rs
 
 ```rust
 extern "C" {
@@ -337,25 +347,28 @@ extern "C" {
     fn rust_main_secondary(cpu_id: usize);
 }
 
-unsafe extern "C" fn rust_entry(cpu_id: usize, dtb: usize) {
+unsafe extern "C" fn rust_entry(cpu_id: usize, _dtb: usize) {
     crate::mem::clear_bss();
     crate::cpu::init_primary(cpu_id);
     crate::arch::set_trap_vector_base(trap_vector_base as usize);
-    // rust_main(cpu_id, dtb);
+    //rust_main(cpu_id, 0);
     main();  // 跳转到应用程序的main函数
     self::misc::terminate();  // 程序运行后终止
 }
+
 ```
 
 执行:
 
 ```shell
-make ARCH=riscv64 A=apps/helloworld run
+make ARCH=loongarch64 A=apps/helloworld run
 ```
 
 如无意外， helloworld成功输出！
 
-其实 helloworld 程序本质还是调用 axhal 的 sbi 输出功能，这里把两个组件结合了起来！这也体现了 ArceOS 的思想，只需要把需要的部分组合起来就能实现程序想要的功能。
+![Helloworld](<image/image-2023-08-15 20.01.37.png>)
+
+其实 helloworld 程序本质还是调用 axhal 的输出功能，这里把两个组件结合了起来！这也体现了 ArceOS 的思想，只需要把需要的部分组合起来就能实现程序想要的功能。
 
 **3. 添加 axruntime 组件提供更完整的运行环境**
 
@@ -375,81 +388,37 @@ helloworld --> axruntime --> axhal
 运行命令：
 
 ```shell
-make ARCH= riscv64 A=apps/helloworld run LOG=debug
+make ARCH=loongarch64 A=apps/helloworld run LOG=debug
 ```
 
 运行结果如下图，下面的调试输出信息绿色字体部分可以为直观地展示 axruntime 做的一些初始化的工作。
-
-![image-20230707100119498](image/5j7mDSt3oNqMHyd.png)
+![Alt text](<image/image-2023-08-15 20.06.16.png>)
 
 有了这三个组件的支持，不仅能运行 helloworld 这样的简单程序，还能运行稍微复杂一些的程序。
 
 例如，运行 yield 应用程序 (FIFO scheduler):
 
 ```shell
-make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
+make A=apps/task/yield ARCH=loongarch64 LOG=info SMP=1 run
 ```
 
 运行结果:
-
-![image-20230707143841246](image/OgBFrv8T1bmjEnG.png)
+![Alt text](<image/image-2023-08-15 20.10.09.png>)
 
 **运行过程分析**
 
 可以通过下面的流程图看看 ArceOS 的运行逻辑。
 
-第一步是一些初始化函数的调用过程。
+
 
 **Step 1**
 
-```mermaid
-graph TD;
-    A[axhal::platform::qemu_virt_riscv::boot.rs::_boot] --> init_boot_page_table;
-    A --> init_mmu;
-    A --> P[platform_init];
-    A --> B[axruntime::rust_main];
-    P --> P1["axhal::mem::clear_bss()"];
-    P --> P2["axhal::arch::riscv::set_trap_vector_base()"];
-    P --> P3["axhal::cpu::init_percpu()"];
-    P --> P4["axhal::platform::qemu_virt_riscv::irq.rs::init()"];
-    P --> P5["axhal::platform::qemu_virt_riscv::time.rs::init()"];
-    B --> axlog::init;
-    B --> D[init_allocator];
-    B --> remap_kernel_memory;
-    B --> axtask::init_scheduler;
-    B --> axdriver::init_drivers;
-    B --> Q[axfs::init_filesystems];
-    B --> axnet::init_network;
-    B --> axdisplay::init_display;
-    B --> init_interrupt;
-    B --> mp::start_secondary_cpus;
-    B --> C[main];
-    Q --> Q1["disk=axfs::dev::Disk::new()"];
-    Q --> Q2["axfs::root::init_rootfs(disk)"];
-    Q2 --fatfs--> Q21["main_fs=axfs::fs::fatfs::FatFileSystem::new()"];
-    Q2 --> Q22["MAIN_FS.init_by(main_fs); MAIN_FS.init()"];
-    Q2 --> Q23["root_dir = RootDirectory::new(MAIN_FS)"];
-    Q2 --devfs--> Q24["axfs_devfs::DeviceFileSystem::new()"];
-    Q2 --devfs--> Q25["devfs.add(null, zero, bar)"];
-    Q2 -->Q26["root_dir.mount(devfs)"];
-    Q2 -->Q27["init ROOT_DIR, CURRENT_DIR"];
-    D --> E["In free memory_regions: axalloc::global_init"];
-    D --> F["In free memory_regions:  axalloc::global_add_memory"];
-    E --> G[axalloc::GLOBAL_ALLOCATOR.init];
-    F --> H[axalloc::GLOBAL_ALLOCATOR.add_memory];
-    G --> I["PAGE: self.palloc.lock().init"];
-    G --> J["BYTE: self.balloc.lock().init"];
-    H --> K["BYTE: self.balloc.lock().add_memory"];
-    I --> M["allocator::bitmap::BitmapPageAllocator::init()"];
-    J -->L["allocator::slab::SlabByteAllocator::init() self.inner = unsafe { Some(Heap::new(start, size))"];
-    K --> N["allocator::slab::SlabByteAllocator::add_memory:  self.inner_mut().add_memory(start, size);"];
+要初始化系统内核，例如完成页表、中断入口等功能的初始化。
 
-
-```
-
-下面是 helloworld 程序的运行流程，实际上 helloworld 程序最后调用的是 axhal 封装好的输出功能，本质还是依靠 sbi 进行输出。
 
 **Step 2**
+
+下面是 helloworld 程序的运行流程。
 
 ```mermaid
 graph TD;
@@ -485,7 +454,7 @@ graph TD;
     C --> D["axhal::console::write_bytes(buf);"];
     C --> E["Ok(buf.len())"];
     D --> F["putchar"];
-    F --> G["axhal::platform::qemu_virt_riscv::console::putchar"];
+    F --> G["axhal::platform::qemu_virt_loongarch64::console::putchar"];
     G --> H["sbi_rt::legacy::console_putchar"];
 ```
 
@@ -497,11 +466,11 @@ graph TD;
 
 在之前的部分中，以向屏幕打印“hello world”为目标，由简入繁，共经历了三个阶段，在此做一个简单的总结：
 
-第一阶段，“未有天地之时，混沌状如鸡子”，构建一个可以与硬件交互的最小运行环境 axhal，也可以理解为，在完成引导和必要功能初始化之后就可以直接调用对应平台的汇编指令来实现打印 helloworld 的功能，此时用户所需功能（向屏幕打印“hello world”）和运行时环境是混合在一起的。
+第一阶段，构建一个可以与硬件交互的最小运行环境 axhal，也可以理解为，在完成引导和必要功能初始化之后就可以直接调用对应平台的汇编指令来实现打印 helloworld 的功能，此时用户所需功能（向屏幕打印“hello world”）和运行时环境是混合在一起的。
 
-第二阶段，“清轻者上升为天，重浊者下降为地”，上一阶段的程序分裂成 axhal+helloworld， 尝试将打印 helloworld 功能进行分离并扩展，令 helloworld 扩展成一个独立的 app。该阶段需要定义程序入口，在 axhal 中设置入口点，令 axhal 经过引导之后直接跳转到 helloworld 中执行相应功能。
+第二阶段，上一阶段的程序分裂成 axhal + helloworld，尝试将打印 helloworld 功能进行分离并扩展，令 helloworld 扩展成一个独立的 app。该阶段需要定义程序入口，在 axhal 中设置入口点，令 axhal 经过引导之后直接跳转到 helloworld 中执行相应功能。
 
-第三阶段，“天生日月星辰，地生山川草木”，第二阶段的两个模块进一步分裂并扩展为 axhal+axruntime+helloworld，将 axhal 包装并扩展成 axruntime 来提供各种运行时必要组件，和 axhal 相比，axruntime 掩盖了与底层硬件交互的复杂原理，此时 helloworld 的运行环境由直接依赖于 axhal 变成了更为高级更为强大的 axruntime。
+第三阶段，第二阶段的两个模块进一步分裂并扩展为 axhal + axruntime + helloworld，将 axhal 包装并扩展成 axruntime 来提供各种运行时必要组件，和 axhal 相比，axruntime 掩盖了与底层硬件交互的复杂原理，此时 helloworld 的运行环境由直接依赖于 axhal 变成了更为高级更为强大的 axruntime。
 
 **系统无关和系统相关**
 
@@ -548,22 +517,22 @@ libax = { path = "../../ulib/libax", features=["alloc"]} #尝试添加动态分�
 #![no_main]
 
 use libax::println;
-#为 helloworld 提供可以动态内存分配的字符串类型
+// 为 helloworld 提供可以动态内存分配的字符串类型
 use libax::string::String;
 
 #[no_mangle]
 fn main() {
-	# 声明并初始化一个 String 字符串
+	// 声明并初始化一个 String 字符串
     let s = String::from("I am ArceOS!");
     println!("Hello, world! {}", s);
 }
 ```
 
-运行```make A=apps/helloworld ARCH=riscv64 LOG=info run```，此时运行结果如下图所示：
+运行```make A=apps/helloworld ARCH=loongarch64 LOG=info run```，此时运行结果如下图所示：
 
-![](image/12879bc9837566bb.png)
+![Alt text](<image/image-2023-08-15 20.29.34.png>)
 
-打印出”Hello world! I am ArceOS"，说明成功为 helloworld 提供了动态内存分配功能。
+打印出”Hello world! I am ArceOS!"，说明成功为 helloworld 提供了动态内存分配功能。
 
 ArceOS 在用户看不见的地方根据用户选择的特性需求，组装并扩展各种模块提供定制的运行环境，其实就是 ArceOS 的组件化运作的核心机制。本节内容从最简单的 helloworld 使用动态内存分配特性出发，“窥一斑而知全豹”，来触及 ArceOS 的核心运作机制。在后续的章节中将继续介绍 ArceOS 更为强大的功能特性。
 
@@ -573,25 +542,24 @@ ArceOS 在用户看不见的地方根据用户选择的特性需求，组装并�
 
 这部分介绍的是用户可以通过修改运行命令的内容，来进一步细粒度的控制特性。
 
-以向屏幕打印日志信息为例，如果想要修改日志的过滤等级，例如，展示出 warn 级以上的日志（info 日志不会打印到屏幕上），可以修改原来的运行命令，这里还是以 qemu risv64 平台为例，原始命令为：
+以向屏幕打印日志信息为例，如果想要修改日志的过滤等级，例如，展示出 warn 级以上的日志（info 日志不会打印到屏幕上），可以修改原来的运行命令，这里还是以 qemu loongarch64 平台为例，原始命令为：
 
 ```bash
-make A=apps/helloworld ARCH=riscv64 LOG=info run
+make A=apps/helloworld ARCH=loongarch64 LOG=info run
 ```
 
 尝试运行一下，发现 info 以上级别的日志会被打印出来（提示：绿色字体所在行为 info 级别的日志信息）：
 
-![img](image/70bcb2d5d8955ed2.png)
-
+![Alt text](<image/image-2023-08-15 20.38.18.png>)
 修改 log 日志等级：
 
 ```bash
-make A=apps/helloworld ARCH=riscv64 LOG=warn run
+make A=apps/helloworld ARCH=loongarch64 LOG=warn run
 ```
 
 此时能够展示日志的最低级别提高到 warn，之前 info 级别的日志不会被打印到屏幕中，尝试运行上述命令，运行结果如下：
 
-![img](image/ff2b0cf439009c81.png)
+![Alt text](<image/image-2023-08-15 20.34.23.png>)
 
 可以看到之前展示出来绿色字体的 info 日志行都消失了。
 
@@ -793,7 +761,7 @@ graph TD;
 
 ### 1.2 arceos移植到loongarch架构所需环境
 
-在进行实验之前，需要安装一些基本的工具和搭建实验环境。本实验需要在linux操作系统上进行。下面的操作均在VMware中完成。实验所需环境的版本和构建命令在https://github.com/aoooos中均有提供。
+在进行实验之前，需要安装一些基本的工具和搭建实验环境。本实验需要在linux操作系统上进行。下面的操作均在 Ubuntu 20.04.6 LTS 中完成。实验所需环境的版本和构建命令在 https://github.com/orgs/aoooos/repositories 中均有提供。
 
 #### 1.2.1 loongarch GNU 工具链
 
