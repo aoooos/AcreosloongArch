@@ -4,7 +4,12 @@
 
 ## 1 项目简介
 
-本文档作为ArceOS的LoongArch版本介绍，对于硬件无关的内容，本文档只会介绍一些抽象细节和思路。文档组织结构为，第一章对ArceOS和LoongArch做一个简单介绍并提供一个在Ubuntu下搭建一个LoongArch的交叉编译环境的方法（可参考https://github.com/aoooos）。后续章节将对应于ArceOS的各个功能模块。
+本文档为[proj226-arceos](https://github.com/oscomp/proj226-arceos)项目的参赛文档。
+
+本文档介绍ArceOS在LoongArch架构上的实现。对于与硬件无关的内容，本文档仅关注设计思路和抽象逻辑，不涉及具体实现细节。第一章简要介绍ArceOS项目和LoongArch架构，并提供在Ubuntu系统下配置ArceOS编译和运行环境的方法，可参考[https://github.com/orgs/aoooos/repositories](https://github.com/orgs/aoooos/repositories)中的内容。
+
+后续章节将详细阐述ArceOS在LoongArch架构上实现的设计思路和关键逻辑，包括内核初始化、内存管理等方面的内容。通过阅读本文档，可以对ArceOS在LoongArch架构上运行的机制有一个整体了解。
+
 
 ### 1.1 ArceOS介绍
 
@@ -420,7 +425,6 @@ make A=apps/task/yield ARCH=loongarch64 LOG=info SMP=1 run
 下面是 helloworld 程序的运行流程。
 
 ```mermaid
-%%{init: {'theme': 'default', 'flowchart': {'scale': 0.7}}}%%
 graph TD;
     A[main] --> B["libax::println!(Hello, world!)"];
     B --> C[libax:io::__print_impl];
@@ -553,6 +557,7 @@ make A=apps/helloworld ARCH=loongarch64 LOG=info run
 尝试运行一下，发现 info 以上级别的日志会被打印出来（提示：绿色字体所在行为 info 级别的日志信息）：
 
 <img src="image/image-2023-08-15 20.38.18.png" alt="Alt text" style="zoom:80%;" />
+
 修改 log 日志等级：
 
 ```bash
@@ -738,7 +743,7 @@ make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
 启动yield的同时，实现了更加细节部分的调用，流程图如下：
 
 ```mermaid
-%%{init: {'theme': 'default', 'flowchart': {'scale': 0.8}}}%%
+%%{init: {'theme': 'default', 'flowchart': {'scale': 0.3}}}%%
 graph TD;
     T["main task"] --> A["axtask::lib::spawn"];
     A -- "task_i" --> B["axtask::run_queue::AxRunqQueue.scheduler.push_back(tasak_i)"];
@@ -758,11 +763,11 @@ graph TD;
 
 ### 1.2 ArceOS移植到LoongArch架构所需环境
 
-在进行实验之前，需要安装一些基本的工具和搭建实验环境。本实验需要在linux操作系统上进行。下面的操作均在 Ubuntu 20.04.6 LTS 中完成。实验所需环境的版本和构建命令在 https://github.com/orgs/aoooos/repositories 中均有提供。
+在进行实验之前，需要安装一些基本的工具和搭建实验环境。本实验的操作均在 Ubuntu 20.04.6 LTS 中完成，理论上Debian系的Linux均能轻松通过下文指令或脚本搭建本次实验环境。实验所需环境的版本和构建命令在 https://github.com/orgs/aoooos/repositories 中均有提供。
 
 #### 1.2.1 LoongArch GNU 工具链
 
-由于在项目中需要使用 gdb 以及 objdump、readelf 等 LoongArch GNU 工具链中工具，且在交叉编译Rust时也需要用到Loongrch GNU 工具链中多个工具。在 https://github.com/aoooos/crosstool-ng-loongarch64 中，提供了crosstool-ng-loongarch64的构建流程。
+本项目需要使用LoongArch架构的GNU工具链，包括objdump、readelf等调试和反汇编工具。同时在交叉编译Rust代码时也需要LoongArch的编译器和链接器。为此，项目提供了crosstool-ng-loongarch64的详细构建流程，位于https://github.com/aoooos/crosstool-ng-loongarch64仓库中，遵循仓库中的[README.md](https://github.com/aoooos/crosstool-ng-loongarch64/blob/main/README.md)文件的步骤即可完成构建。同时在仓库的release中也提供了一个编译好的版本。
 
 #### 1.2.2 Rust 工具链
 
@@ -779,7 +784,69 @@ cp ../config.toml ./
 ./x.py install
 ```
 
-默认的config.toml文件提供的 Rust toolchain for the target：`x86_64-unknown-linux-gnu`， `x86_64-unknown-none`， `riscv64gc-unknown-none-elf`， `riscv64gc-unknown-linux-gnu`，`aarch64-unknown-none-softfloat`， `aarch64-unknown-linux-gnu`， `loongarch64-unknown-none-softfloat`， `loongarch64-unknown-none`， `loongarch64-unknown-linux-gnu`。需要提前准备编译各个架构的软件依赖，https://github.com/aoooos/rust-toolchain-for-loongarch64 中给出了各软件依赖的编译和获取方法。
+做实验时的rust版本或多或少有些问题，为此经过大量尝试，我们发现了一版能用的rust并发布在了https://github.com/aoooos/rust.git中。位于https://github.com/loongarch-rs/rust/tree/master仓库中的新版rust应该也是可以用的，但我们并未对此进行测试。
+
+编译rust所需配置文件[config.toml](https://github.com/aoooos/rust-toolchain-for-loongarch64/raw/main/config.toml)如下所示：
+
+```toml
+profile = 'user'
+changelog-seen = 2
+
+[llvm]
+ccache = 'sccache'
+
+[build]
+target = ['x86_64-unknown-linux-gnu', 'x86_64-unknown-none', 'riscv64gc-unknown-none-elf', 'riscv64gc-unknown-linux-gnu','aarch64-unknown-none-softfloat', 'aarch64-unknown-linux-gnu', 'loongarch64-unknown-none-softfloat', 'loongarch64-unknown-none','loongarch64-unknown-linux-gnu']
+
+docs = false
+cargo-native-static = true
+
+configure-args = ['--target=x86_64-unknown-linux-gnu,x86_64-unknown-none,riscv64gc-unknown-none-elf,riscv64gc-unknown-linux-gnu,aarch64-unknown-none-softfloat,aarch64-unknown-linux-gnu,loongarch64-unknown-none,loongarch64-unknown-linux-gnu,loongarch64-unknown-none-softfloat', '--prefix=~/.rustup/toolchains/dev', '--disable-docs']
+
+[install]
+
+prefix = '~/.rustup/toolchains/dev'
+
+[rust]
+lld=true
+
+[target.x86_64-unknown-linux-gnu]
+
+[target.x86_64-unknown-none]
+
+[target.riscv64gc-unknown-none-elf]
+
+[target.riscv64gc-unknown-linux-gnu]
+
+[target.aarch64-unknown-none-softfloat]
+
+[target.aarch64-unknown-linux-gnu]
+
+[target.loongarch64-unknown-linux-gnu]
+cc = "loongarch64-unknown-linux-gnu-gcc"
+cxx = "loongarch64-unknown-linux-gnu-g++"
+ar = "loongarch64-unknown-linux-gnu-ar"
+ranlib = "loongarch64-unknown-linux-gnu-ranlib"
+linker = "loongarch64-unknown-linux-gnu-gcc"
+
+[target.loongarch64-unknown-none]
+cc = "loongarch64-unknown-linux-gnu-gcc"
+cxx = "loongarch64-unknown-linux-gnu-g++"
+ar = "loongarch64-unknown-linux-gnu-ar"
+ranlib = "loongarch64-unknown-linux-gnu-ranlib"
+linker = "loongarch64-unknown-linux-gnu-gcc"
+
+[target.loongarch64-unknown-none-softfloat]
+cc = "loongarch64-unknown-linux-gnu-gcc"
+cxx = "loongarch64-unknown-linux-gnu-g++"
+ar = "loongarch64-unknown-linux-gnu-ar"
+ranlib = "loongarch64-unknown-linux-gnu-ranlib"
+linker = "loongarch64-unknown-linux-gnu-gcc"
+
+[dist]
+```
+
+各个配置的含义在[config.toml](https://github.com/aoooos/rust-toolchain-for-loongarch64/raw/main/config.toml)文件中有详尽描述，支持的target有`x86_64-unknown-linux-gnu`， `x86_64-unknown-none`， `riscv64gc-unknown-none-elf`， `riscv64gc-unknown-linux-gnu`，`aarch64-unknown-none-softfloat`， `aarch64-unknown-linux-gnu`， `loongarch64-unknown-none-softfloat`， `loongarch64-unknown-none`， `loongarch64-unknown-linux-gnu`。需要提前准备编译各个架构的软件依赖，https://github.com/aoooos/rust-toolchain-for-loongarch64 中给出了各软件依赖的编译或获取方法。
 
 #### 1.2.3 qemu
 
@@ -807,15 +874,15 @@ make -j$(nproc)
 make install
 ```
 
-注意，此版本qemu也许不能够结合gdb进行调试，调试所需qemu和gdb在下面给出。
+⚠️注意，此版本qemu可能不能结合gdb进行调试，调试所需qemu和gdb在下面给出。同时，在实验过程中（2023年6月）我们发现最新版本的qemu无法成功运行ArceOS，这一bug后期应该会被修复，因此在实验时我们采用的是老版本的qemu和gdb。
 
 #### 1.2.4 debug 工具
 
 https://github.com/aoooos/debug-tools-for-loongarch-arceos 仓库中提供的qemu和gdb经过测试可以满足ArceOS的debug需求。
 
-此qemu无需编译，开箱即用，x86_64架构下支持loongarch64的qemu位于 ```./qemu/x86_64``` 目录下。
+此[qemu](https://github.com/foxsen/qemu-loongarch-runenv)无需编译，开箱即用，host为x86_64支持target为loongarch64的qemu位于 `./qemu/x86_64` 目录下。
 
-gdb需要手动编译，编译方式参考 readme.md 文档。
+[gdb](https://github.com/aoooos/gdb-for-loongarch)需要手动编译，编译方式参考 [README](https://github.com/aoooos/gdb-for-loongarch/blob/main/README)文档。
 
 ### 1.3 LoongArch介绍
 
@@ -1686,11 +1753,7 @@ fn write(&mut self);
 
 比如CRMD寄存器各个位的定义如下:
 
-![image-20230813195442309](image/image-20230813195442309.png)
-
-![image-20230813195639074](image/image-20230813195639074.png)
-
-![image-20230813195737590](image/image-20230813195737590.png)
+ ![Title](<image/截屏2023-08-16 01.24.51.png>) ![Title](<image/截屏2023-08-16 01.25.18.png>) ![Title](<image/截屏2023-08-16 01.25.38.png>)
 
 那么针对它的寄存器实现如下:
 
