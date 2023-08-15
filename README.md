@@ -765,11 +765,11 @@ graph TD;
 
 #### 1.2.1 LoongArch GNU 工具链
 
-由于在项目中需要使用 gdb 以及 objdump、readelf 等 LoongArch GNU 工具链中工具，且在交叉编译Rust时也需要用到Loongrch GNU 工具链中多个工具。在https://github.com/aoooos/crosstool-ng-loongarch64中，提供了crosstool-ng-loongarch64的构建流程。
+由于在项目中需要使用 gdb 以及 objdump、readelf 等 LoongArch GNU 工具链中工具，且在交叉编译Rust时也需要用到Loongrch GNU 工具链中多个工具。在 https://github.com/aoooos/crosstool-ng-loongarch64 中，提供了crosstool-ng-loongarch64的构建流程。
 
 #### 1.2.2 Rust 工具链
 
-这里给出了Rust源码下载和编译的命令，其完整构建过程可参考https://github.com/aoooos/rust-toolchain-for-loongarch64。
+这里给出了Rust源码下载和编译的命令，其完整构建过程可参考 https://github.com/aoooos/rust-toolchain-for-loongarch64 。
 
 ```bash
 set -ex
@@ -782,11 +782,11 @@ cp ../config.toml ./
 ./x.py install
 ```
 
-默认的config.toml文件提供的 Rust toolchain for the target：`x86_64-unknown-linux-gnu`， `x86_64-unknown-none`， `riscv64gc-unknown-none-elf`， `riscv64gc-unknown-linux-gnu`，`aarch64-unknown-none-softfloat`， `aarch64-unknown-linux-gnu`， `loongarch64-unknown-none-softfloat`， `loongarch64-unknown-none`， `loongarch64-unknown-linux-gnu`。需要从目标连接下载各个架构的工具链，其构建命令在https://github.com/aoooos/rust-toolchain-for-loongarch64中给出。
+默认的config.toml文件提供的 Rust toolchain for the target：`x86_64-unknown-linux-gnu`， `x86_64-unknown-none`， `riscv64gc-unknown-none-elf`， `riscv64gc-unknown-linux-gnu`，`aarch64-unknown-none-softfloat`， `aarch64-unknown-linux-gnu`， `loongarch64-unknown-none-softfloat`， `loongarch64-unknown-none`， `loongarch64-unknown-linux-gnu`。需要提前准备编译各个架构的软件依赖，https://github.com/aoooos/rust-toolchain-for-loongarch64 中给出了各软件依赖的编译和获取方法。
 
 #### 1.2.3 qemu
 
-qemu 是一个开源的虚拟化软件，它可以模拟多种硬件架构和设备，从而使您能够在一个平台上运行不同的操作系统和应用程序。其完整构建过程可参考https://github.com/aoooos/qemu-for-loongarch-arceos。
+qemu 是一个开源的虚拟机软件，它可以模拟多种硬件架构和设备，从而使您能够在一个平台上运行不同的操作系统和应用程序。其完整构建过程可参考 https://github.com/aoooos/qemu-for-loongarch-arceos 。
 
 **安装依赖**
 
@@ -810,11 +810,15 @@ make -j$(nproc)
 make install
 ```
 
-注意在编译完成后可能仍然无法使用提示缺少相关的动态库，这时可自行上网查看相应的安装方法，对于缺失的库，其安装方式大都是相同的，只是在名字上有一点差异。
+注意，此版本qemu也许不能够结合gdb进行调试，调试所需qemu和gdb在下面给出。
 
-#### 1.2.4 GCC工具链
+#### 1.2.4 debug 工具
 
-为LoongArch提供gdb和debug功能。其环境构建命令分别在https://github.com/aoooos/gdb-for-loongarch和https://github.com/aoooos/debug-tools-for-loongarch-arceos中提供。
+https://github.com/aoooos/debug-tools-for-loongarch-arceos 仓库中提供的qemu和gdb经过测试可以满足ArceOS的debug需求。
+
+此qemu无需编译，开箱即用，x86_64架构下支持loongarch64的qemu位于 ```./qemu/x86_64``` 目录下。
+
+gdb需要手动编译，编译方式参考 readme.md 文档。
 
 ### 1.3 LoongArch介绍
 
@@ -1038,45 +1042,50 @@ VA = PA + 固定偏移
 
 <div STYLE="page-break-after: always;"></div>
 
-## 2 Hello World
+## 2 ArceOS for LoongArch
 
-在这一章中，介绍了如何进入使用Rust编写内核代码的世界以及在ArceOS中helloworld的字符打印。此外，本章还将简单介绍Rust编程语言中的两个很重要的特性，Trait和macro。
+在这一章中，介绍了在loongarch上运行ArceOS的实现细节。
 
-- Rust的裸机环境配置
-- qemu平台支持
-- 启动过程
-- 字符打印
-- Trait和macro
 
-<div STYLE="page-break-after: always;"></div>
+### 2.1 axhal
+axhal 位于操作系统与硬件之间，旨在提供一种标准化的接口，以简化不同硬件设备之间的交互和管理。axhal 中与 LoongArch 有关的内容如下：
+.
+├── build.rs
+├── Cargo.toml
+├── linker.lds.S
+├── linker_loongarch64.lds
+└── src
+    ├── arch
+    │   ├── loongarch64
+    │   │   ├── context.rs
+    │   │   ├── mod.rs
+    │   │   ├── tlb.S
+    │   │   ├── trap.rs
+    │   │   └── trap.S
+    │   └── mod.rs
+    ├── cpu.rs
+    ├── irq.rs
+    ├── lib.rs
+    ├── mem.rs
+    ├── paging.rs
+    ├── platform
+    │   ├── mod.rs
+    │   └── qemu_virt_loongarch64
+    │       ├── apic.rs
+    │       ├── boot.rs
+    │       ├── console.rs
+    │       ├── irq.rs
+    │       ├── loongarch_bios_0310.bin
+    │       ├── loongarch_bios_0310_debug.bin
+    │       ├── mem.rs
+    │       ├── misc.rs
+    │       ├── mod.rs
+    │       ├── mp.rs
+    │       └── time.rs
+    ├── time.rs
+    └── trap.rs
 
-### 2.1 Rust的裸机环境配置
-
-在默认情况下，Rust 尝试适配当前的系统环境，编译可执行程序。为了描述不同的环境，Rust 使用一个称为目标三元组（target triple）的字符串。要查看当前系统的目标三元组，我们可以运行 rustc --version --verbose 。Rust 编译器尝试为当前系统的三元组编译，并假定底层有一个 类似于 Windows 或 Linux 的操作系统提供C语言运行环境——然而这将导致链接器错误。所以，为了避免这个错误，需要另选一个底层没有操作系统的运行环境，这样的环境被称为裸机环境。 在 risc-v 平台上，Rust原生就有支持相应的 riscv64gc-unknown-none-elf 裸机平台。但对于 LoongArch64 平台来说，并没有相应的支持，目前只含有 loongarch64-unknown-linuxgnu、loongarch64-unknown-linux-musl 两个支持，而这个两个三元组都默认底层有linux系统支持，因此想要编译裸机代码，就需要去掉标准库支持。 通常我们需要在项目根目录下创建 .cargo/config 文件，并写入相应的配置。在当前项目下的内 容如下: 
-
-![image-20230606222134526](image/image-20230606222134526.png)
-
-target 指定了编译的目标平台， linker 指定了所用的链接脚本，虽然这里指定了配置，但后续介绍的 build.rs 会修改相关的规则才能编译裸机代码。 
-
-**Rust的build.rs文件** 
-
-在项目下存在一个build.rs文件。一些项目希望编译第三方的非 Rust 代码，例如 C 依赖库；一些 希望链接本地或者基于源码构建的 C 依赖库；还有一些项目需要功能性的工具，例如在构建之间 执行一些代码生成的工作等。对于这些目标，Cargo 提供了自定义构建脚本的方式，来帮助用户 更好的解决类似的问题。 
-
-只需在项目的根目录下添加一个 build.rs 文件即可。这样一来， Cargo 就会先编译和执行该构 建脚本，然后再去构建整个项目。 
-
-构建脚本如果会产出文件，那么这些文件需要放在统一的目录中，该目录可以通过 OUT_DIR 环境 变量来指定，构建脚本不应该修改该目录之外的任何文件！ 
-
-构建脚本可以通过 println! 输出内容跟 Cargo 进行通信：Cargo 会将每一行带有 cargo: 前缀的输出解析为一条指令，其它的输出内容会自动被忽略。
-
-### 2.2 qemu平台支持
-
-#### 2.2.1 qemu介绍
-
-QEMU （Quick Emulator）是业界主流的设备仿真模拟软件。可以在一种架构（如X86 PC）的物理机上运行支持其它架构的操作系统和程序，从而让软件无感知运行在不同硬件架构下。
-
-![img](image/v2-828d52985a34ce655090d55a17372e74_r.jpg)
-
-#### 2.2.2 platform模块
+### 2.2 platform模块
 
 **首先在axconfig中对计算机系统的硬件参数和属性进行配置**。在modules/axconfig/src/platform/qemu-virt-loongarch64.toml中描述如下：
 
@@ -1107,7 +1116,7 @@ mmio-regions = [
 virtio-mmio-regions = []
 
 # Timer interrupt frequency in Hz.
-timer_frequency = "100_000_000"      # 10MHz
+timer_frequency = "1_000_000_000"   # 1.0GHz
 ```
 
 - `arch = "loongarch64"`：指定了计算机系统的体系结构标识为 "loongarch64"。
@@ -1117,15 +1126,14 @@ timer_frequency = "100_000_000"      # 10MHz
 - `kernel-base-paddr = "0x000_1000"`：指定了内核镜像的基础物理地址为 0x000_1000。
 - `kernel-base-vaddr = "0x9000_0000_0000_1000"`：指定了内核镜像的基础虚拟地址为 0x9000_0000_0000_1000。
 - `phys-virt-offset = "0x9000_0000_0000_0000"`：指定了线性映射偏移量，用于在物理地址和虚拟地址之间进行快速转换。
-- `mmio-regions`：定义了一些 MMIO（内存映射输入/输出）区域，每个区域由基地址和大小组成。在这个例子中，有三个 MMIO 区域：IO APIC、HPET 和 Local APIC。
-- `virtio-mmio-regions`：定义了一些 VirtIO MMIO 区域，但在这个例子中是空的。
-- `timer_frequency = "10_000_000"`：指定了计时器中断的频率为 10,000,000 Hz，即 10MHz。
+- `mmio-regions`：定义了一些 MMIO（内存映射输入/输出）区域，每个区域由基地址和大小组成，有三个 MMIO 区域：IO APIC、HPET 和 Local APIC。
+- `virtio-mmio-regions`：定义了一些 VirtIO MMIO 区域。
+- `timer_frequency = "10_000_000"`：指定了计时器中断的频率为 1_000_000_000 Hz，即 1.0GHz。
 
-这些配置参数在构建和配置计算机系统时使用， QEMU模拟特定硬件平台时需要进行这些配置参数进行初始化。不同的硬件平台和体系结构可能会有不同的配置参数。
+这些配置参数在构建和配置计算机系统时使用，QEMU模拟特定硬件平台时需要进行这些配置参数进行初始化。
 
-**接下来是在modules/axhal/src/platform/qemu_virt_loongarch64文件夹中具体配置qemu平台**，文件夹内容如下：
+接下来是在modules/axhal/src/platform/qemu_virt_loongarch64文件夹中具体配置qemu平台，文件夹内容如下：
 
-![image-20230606232453480](image/image-20230606232453480.png)
 
 其中，
 
@@ -1165,7 +1173,7 @@ if #[cfg(all(
 
 通过加入`#[cfg(all(target_arch = "loongarch64", feature = "platform-qemu-virt-loongarch64"))]`判断是否满足目标架构为"loongarch64"并且启用了"platform-qemu-virt-loongarch64"特性的条件。如果满足条件，就引入了名为`qemu_virt_loongarch64`的模块，并将其公开作为公共接口。
 
-### 2.3 启动过程
+### 2.2 启动过程
 
 **计算机启动过程**
 
@@ -1221,193 +1229,6 @@ SYM_CODE_START(kernel_entry) # kernel entry point
 SYM_CODE_END(kernel_entry)
 ```
 
-### 2.4 字符打印
-
-关于helloworld的打印过程中函数封装调用的过程在1.1.6小节中有较为详细的介绍，这里不再赘述，只给出其部分实现代码。
-
-**helloworld**
-
-```rust
-#![no_std]
-#![no_main]
-
-#[no_mangle]
-fn main() {
-    libax::println!("Hello, world!");
-}
-```
-
-在linker文件中，指定了入口为main函数，因此这里关闭了Rust的函数名重整，这样才能正确链接到符号。
-
-首先在helloworld.rs文件的main函数中，
-
-```rust
-fn main() {
-    libax::println!("Hello, world!");
-}
-```
-
-调用了libax模块中的函数println!()
-
-```rust
-/// Prints to the standard output, with a newline.
-#[macro_export]
-macro_rules! println {
-    () => { $crate::print!("\n") };
-    ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::io::__print_impl(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
-    }
-}
-
-```
-
-### 2.5 trait和macro
-
-首先可以简单了解一下 trait ， trait 告诉 Rust 编译器某个特定类型拥有可能与其他类型共享的功能。可以通过 trait 以一种抽象的方式定义共享的行为。可以使用 trait bounds 指定泛型是任何拥有特定行为的类型。一个类型的行为由其可供调用的方法构成。如果可以对不同类型调用相同的方法的话，这些类型就可以共享相同的行为了。trait 定义是一种将方法签名组合起来的方法，目的是定义一个实现某些目的所必需的行为的集合.从上面的定义可以看到其与其它编程语言中的接口非常类似。下面是使用C++和Rust分别使用接口和 trait 实现打印一个字符串的功能:
-
-```c++
-class Display{
-    public:
-    virtual void display() = 0;
-}
-class Screen:public Display{
-    void display(){
-        std::cout << "hello" << std::endl;
-    }
-}
-```
-
-```rust
-pub trait Display{
-    fn display();
-}
-struct Screen{};
-impl Display for Screen{
-    fn display(){
-        println!("hello");
-    }
-}
-```
-
-**孤儿规则**: 实现 trait 时需要注意的一个限制是，只有当至少一个 trait 或者要实现 trait 的类型位于crate 的本地作用域时，才能为该类型实现 trait。不能为外部类型实现外部 trait。
-
-trait可以提供默认实现，如果不将其进行覆写，则使用的是默认实现，除了提供接口抽象的能力，在加上泛型机制后，trait的能力就会更加强大，比如当我们在函数传递一个参数时，希望这个参数可以调用某个特定的方法，这个时候函数的声明可能如下:
-
-```rust
-pub fn notify(item: &impl Display) {
-    item::display();
-}
-```
-
-对于 item 参数，我们指定了 impl 关键字和 trait 名称，而不是具体的类型。该参数支持任何实现了指定 trait 的类型。注意这里使用了引用，而不是直接使用 impl Display ，因为Rust需要在编译器知道类型的大小，而 impl Display 的大小未知，因此需要使用引用将其转为指针大小。
-
-这个函数声明虽然没有显示出泛型，然后实际上背后就是泛型，其真正的函数定义如下:
-
-```rust
-pub fn notify<T:Display>(item: &T) {
-    item::display();
-}
-```
-
-其中T就是泛型参数，这在Rust称为Trait Bound 语法，这意味着传入的类型需要实现相应的trait，可以在一个类型上添加多个trait，从而添加更多的限制。trait还可以约束trait，如下:
-
-```rust
-trait Learning {}
-
-trait Teaching: Learning {}
-```
-
-如果一个类型需要实现Teaching，则其需要先实现Learning。使用 trait bound 还可以有条件地为类型实现方法:
-
-```rust
-struct Pair<T> {
-    x: T,
-    y: T,
-}
-impl<T: Display + PartialOrd> Pair<T> {
-    fn cmp_display(&self) {
-        if self.x >= self.y {
-            println!("The largest member is x = {}", self.x);
-        } else {
-            println!("The largest member is y = {}", self.y);
-        }
-    }
-}
-```
-
-只有那些为 T 类型实现了 PartialOrd trait （来允许比较） 和 Display trait （来启用打印）的 Pair<T> 才会实现 cmp_display 方法：
-
-在大致了解了trait的作用后就可以知道在 println! 的实现中需要先自定义一个结构体为其实现Write trait了。此trait包含了三个函数，在将其中的 write_str 函数实现后，另外两个函数就不需要实现了，这时因为另外两个函数只依赖此函数。
-
-当然实现了上述trait之后，确实可以进行打印字符串等等操作了，但是我们仍然无法进行格式化的输出，这就到了实现 println! 宏的部分了。
-
-**marcro**
-
-**宏**（*Macro*）指的是 Rust 中一系列的功能：使用 macro_rules! 的 **声明**（*Declarative*）宏，和三种 **过程**（*Procedural*）宏：
-
-- 自定义 #[derive] 宏在结构体和枚举上指定通过 derive 属性添加的代码
-- 类属性（Attribute-like）宏定义可用于任意项的自定义属性
-- 类函数宏看起来像函数不过作用于作为参数传递的 token
-
-这里我们主要关注的是声明宏，其它三种过程宏中自定义宏我们会经常使用，其主要用来为自定义类型实现一些基本的trait，比如debug。
-
-声明宏允许我们编写一些类似 Rust match 表达式的代码， match 表达式是控制结构，其接收一个表达式，与表达式的结果进行模式匹配，然后根据模式匹配执行相关代码。宏也将一个值和包含相关代码的模式进行比较；此种情况下，该值是传递给宏的 Rust 源代码字面值，模式用于和前面提到的源代码字面值进行比较，每个模式的相关代码会替换传递给宏的代码。所有这一切都发生于编译时。
-
-一个简单的Rust宏如下:
-
-```rust
-macro_rules! create_function {
-    // 此宏接受一个 `ident` 指示符表示的参数，并创建一个名为 `$func_name` 的函数。
-    // `ident` 指示符用于变量名或函数名
-    ($func_name:ident) => (
-        fn $func_name() {
-            // `stringify!` 宏把 `ident` 转换成字符串。
-            println!("You called {:?}()",
-                stringify!($func_name))
-        }
-    )
-}
-```
-
-宏的参数使用一个美元符号 $ 作为前缀，并使用一个指示符（designator）来 注明类，一些常见的指示符类型如下:
-
-- block
-- expr 用于表达式
-- ident 用于变量名或函数名
-- item
-- pat (模式 *pattern*)
-- path
-- stmt (语句 *statement*)
-- tt (标记树 *token tree*)
-- ty (类型 *type*)
-
-宏在参数列表中可以使用 + 来表示一个参数可能出现一次或多次，使用 * 来表示该 参数可能出现零次或多次。这里我们直接分析 print 和 println 的官方实现:
-
-```rust
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => {{
-        $crate::io::_print($crate::format_args!($($arg)*));
-    }};
-}
-```
-
-format_args宏从传递给_print的参数中构建一个fmt::Arguments类型，再调用自定义的 _print函数打印，由于我们已经为结构体实现了 Write trait 的 write_str ，因此可以直接调用write_fmt 函数。
-
-```rust
-macro_rules! println {
-    () => {
-        $crate::print!("\n")
-    };
-    ($($arg:tt)*) => {{
-        $crate::io::_print($crate::format_args_nl!($($arg)*));
-    }};
-}
-```
-
-println 的实现中增添了空参数的匹配项，因此当参数为空时会直接打印换行符，而format_args_nl 只是 format_args 的特殊版，其在最后加入了换行符。
-
-<div STYLE="page-break-after: always;"></div>
 
 ## 3 Exception
 
@@ -1424,7 +1245,7 @@ println 的实现中增添了空参数的匹配项，因此当参数为空时会
 
 龙芯架构定义了 4 个运行特权等级（Privilege LeVel，简称 PLV），分别是 PLV0~PLV3。应用软件应运行在PLV1~PLV3 这三个非特权的等级上，从而与运行在 PLV0 级上的操作系统等系统软件隔离开。应用软件具体运行在哪个特权等级上是由系统软件在运行时决定的，应用软件对此无法确切感知。龙芯架构下，应用软件通常运行在 PLV3 级上。与risc-v不同，loongarch架构下没有所谓的M态。
 
-刚开机时，CPU 初始化为操作系统核心态对应的运行模式，执行引导程序加载操作系统。操作系统做完一系列初始化后，控制 CPU 切换到操作系统用户态对应的运行模式去执行应用程序。应用程序执行过程中，如果出现用户态对应的运行模式无法处理的事件，则 CPU 会通过异常或中断回到核心态对应的运行模式，执行操作系统提供的服务程序。操作系统完成处理后再控制 CPU 返回用户态对应的运行模式，继续运行原来的应用程序或者调度另一个应用程序。在 LoongArch 指令系统中，CPU 当前所处的运行模式由当前模式信息控制状态寄存器（CSR.CRMD）的 PLV 域的值确定，其值为 0～3 分别表示 CPU 正处于 PLV0～PLV3 四种运行模式。
+刚开机时，CPU 初始化为操作系统核心态对应的运行模式，执行引导程序加载操作系统。操作系统做完一系列初始化后，控制 CPU 切换到操作系统用户态对应的运行模式去执行应用程序。应用程序执行过程中，如果出现用户态对应的运行模式无法处理的事件，则 CPU 会通过例外或中断回到核心态对应的运行模式，执行操作系统提供的服务程序。操作系统完成处理后再控制 CPU 返回用户态对应的运行模式，继续运行原来的应用程序或者调度另一个应用程序。在 LoongArch 指令系统中，CPU 当前所处的运行模式由当前模式信息控制状态寄存器（CSR.CRMD）的 PLV 域的值确定，其值为 0～3 分别表示 CPU 正处于 PLV0～PLV3 四种运行模式。
 
 ![image-20230813170706231](image/image-20230813170706231.png)
 
@@ -1453,7 +1274,7 @@ ertn 指令用于trap上下文切换的处理返回。执行 IDLE 指令后，�
 
 ### 3.3 例外
 
-异常与中断是一种打断正常的软件执行流，切换到专门的处理函数的机制。它在各种运行模式的转换中起到关键的纽带作用。比如用户态代码执行过程中，当出现对特权空间的访问，或者访问了虚实地址映射表未定义的地址，或者需要调用操作系统服务等情况时，CPU 通过发出异常来切换到核心态，进入操作系统定义的服务函数。操作系统完成处理后，返回发生异常的代码并同时切换到用户态。通常会将中断也视为一种特殊的异常，不过中断是异步的而普通异常是同步发生的，从来源看，异常可以有以下几种:
+例外是指在程序运行过程中出现的意外状况，导致程序无法继续正常执行。例外通常是由于程序内部的错误或异常情况导致的，它们可能会导致程序崩溃或不稳定。比如用户态代码执行过程中，当出现对特权空间的访问，或者访问了虚实地址映射表未定义的地址，或者需要调用操作系统服务等情况时，CPU 通过发出例外来切换到核心态，进入操作系统定义的服务函数。操作系统完成处理后，返回发生异常的代码并同时切换到用户态。通常会将中断和例外统称为异常，不过中断是异步的而普通例外是同步发生的，从来源看，异常可以有以下几种:
 
 - 外部事件：来自 CPU 核外部的事件，通常是中断指令执行中的错误：执行中的指令的操作码或操作数不符合要求，例如不存在的指令、除法除以 0、地址不对齐、用户态下调用核心态专有指令或非法地址空间访问等
 - 数据完整性问题：当使用 ECC 等硬件校验方式的存储器发生校验错误时，会产生异常。这个功能可以被关闭。一般不会涉及到这个处理
@@ -1461,7 +1282,7 @@ ertn 指令用于trap上下文切换的处理返回。执行 IDLE 指令后，�
 - 系统调用和陷入：由专有指令产生，其目的是产生操作系统可识别的异常，用于在保护模式下调用核心态的相关操作。这个是本节关注的重点。
 - 浮点运算错误
 
-LoongArch平台上的例外状态信息保存在ESTAT寄存器中，该寄存器记录例外的状态信息，包括所触发例外的一二级编码，以及各中断的状态。该寄存器的实现在后续小结中会有展示。
+LoongArch平台上的异常状态信息保存在ESTAT寄存器中，该寄存器记录例外的状态信息，包括所触发例外的一二级编码，以及各中断的状态。该寄存器的实现在后续小结中会有展示。
 
 ![image-20230813171722205](image/image-20230813171722205.png)
 
@@ -1480,9 +1301,11 @@ LoongArch 指令系统支持中断线的中断传递机制，共定义了 13 个
 
 当采用向量中断模式的时候，处理器通常不可避免地需要依照一套既定的优先级规则来从多个已生效的中断源中选择一个，跳转到其对应的处理程序入口处。LoongArch 指令系统实现的是向量中断，采用固定优先级仲裁机制，具体规则是硬件中断号越大优先级越高，即 IPI 的优先级最高，TI 次之，⋯，SWI0 的优先级最低。
 
+
+
 ### 3.5 部分控制状态寄存器
 
-处理上述提到的PRMD和CRMD两个寄存器外，实验中还会涉及到其它很多寄存器，下面只会显示本节可能会使用到的寄存器。
+除了上述提到的PRMD和CRMD两个寄存器外，实验中还会涉及到其它很多寄存器，下面只会显示本节可能会使用到的寄存器。
 
 **ECFG**
 
@@ -1544,70 +1367,11 @@ impl Era {
 ```
 
 
+### 3.6 特权级切换
 
-### 3.6 LoongArch寄存器
+通常例外和中断的处理对用户程序来说是透明的，相关软硬件需要保证处理前后原来执行中的代码看到的 CPU 状态保持一致。这意味着开始例外和中断处理程序之前需要保存所有可能被破坏的、原上下文可见的 CPU状态，并在处理完返回原执行流之前恢复。需要保存的上下文包括例外处理代码的执行可能改变的寄存器。发生例外的地址、处理器状态寄存器、中断屏蔽位等现场信息以及特定例外的相关信息（如触发存储访问例外的地址）。例外和中断的处理代码通常在内核态执行，如果它们触发前处理器处于用户态，硬件会自动切换到内核态。这种情况下通常栈指针也会被重新设置为指向内核态代码所使用的栈，以便隔离不同特权等级代码的运行信息。
 
-LoongArch的寄存器包括通用寄存器（GPRs）、浮点寄存器（FPRs）、向量寄存器（VRs） 和用于特权模式（PLV0）的控制状态寄存器（CSRs）。
-
-**通用寄存器**
-
-LoongArch包括32个通用寄存器（ `$r0` ~ `$r31` ），LA32中每个寄存器为32位宽， LA64中每个寄存器为64位宽。 `$r0` 的内容总是固定为0，而其他寄存器在体系结构层面 没有特殊功能。（ `$r1` 算是一个例外，在BL指令中固定用作链接返回寄存器。）
-
-内核使用了一套LoongArch寄存器约定，定义在LoongArch ELF psABI规范中。
-
-| 寄存器名      | 别名        | 用途             | 跨调用保持 |
-| :------------ | :---------- | :--------------- | :--------- |
-| `$r0`         | `$zero`     | 常量0            | 不使用     |
-| `$r1`         | `$ra`       | 返回地址         | 否         |
-| `$r2`         | `$tp`       | TLS/线程信息指针 | 不使用     |
-| `$r3`         | `$sp`       | 栈指针           | 是         |
-| `$r4`-`$r11`  | `$a0`-`$a7` | 参数寄存器       | 否         |
-| `$r4`-`$r5`   | `$v0`-`$v1` | 返回值           | 否         |
-| `$r12`-`$r20` | `$t0`-`$t8` | 临时寄存器       | 否         |
-| `$r21`        | `$u0`       | 每CPU变量基地址  | 不使用     |
-| `$r22`        | `$fp`       | 帧指针           | 是         |
-| `$r23`-`$r31` | `$s0`-`$s8` | 静态寄存器       | 是         |
-
-注意： `$r21` 寄存器在ELF psABI中保留未使用，但是在Linux内核用于保 存每CPU变量基地址。该寄存器没有ABI命名，不过在内核中称为 `$u0` 。在 一些遗留代码中有时可能见到 `$v0` 和 `$v1` ，它们是 `$a0` 和 `$a1` 的别名，属于已经废弃的用法。
-
-**浮点寄存器**
-
-当系统中存在FPU时，LoongArch有32个浮点寄存器（ `$f0` ~ `$f31` ）。在LA64 的CPU核上，每个寄存器均为64位宽。
-
-浮点寄存器的使用约定与LoongArch ELF psABI规范的描述相同：
-
-| 寄存器名      | 别名           | 用途       | 跨调用保持 |
-| :------------ | :------------- | :--------- | :--------- |
-| `$f0`-`$f7`   | `$fa0`-`$fa7`  | 参数寄存器 | 否         |
-| `$f0`-`$f1`   | `$fv0`-`$fv1`  | 返回值     | 否         |
-| `$f8`-`$f23`  | `$ft0`-`$ft15` | 临时寄存器 | 否         |
-| `$f24`-`$f31` | `$fs0`-`$fs7`  | 静态寄存器 | 是         |
-
-注意：在一些遗留代码中有时可能见到 `$fv0` 和 `$fv1` ，它们是 `$fa0` 和 `$fa1` 的别名，属于已经废弃的用法。临时寄存器也被称为调用者保存寄存器。 静态寄存器也被称为被调用者保存寄存器。
-
-**应用程序二进制接口**
-
-ABI定义了应用程序二进制代码中数据结构和函数模块的格式及其访问方式，它使得不同的二进制模块之间的交互成为可能。硬件上并不强制这些内容，因此自成体系的软件可以不遵循部分或者全部 ABI 约定。但通常来说，应用程序至少会依赖操作系统以及系统函数库，因而必须遵循相关约定。
-
-ABI 包括但不限于如下内容：
-
-- 处理器基础数据类型的大小、布局和对齐要求等
-- 寄存器使用约定。它约定通用寄存器的使用方法、别名等
-- 函数调用约定。它约定参数如何传递给被调用的函数、结果如何返回、函数栈帧如何组织等
-- 目标文件和可执行文件格式
-- 程序装载和动态链接相关信息
-- 系统调用和标准库接口定义
-- 开发环境和执行环境等相关约定
-
-LoongArch 的函数调用规范包括了整型调用规范，浮点调用规范，而整型或浮点又会包含复合类型，在实验中，进行系统调用时我们传递都是整数，没有更复杂的类型，因此只需要关注整数部分。
-
-基本整型调用规范提供了 8 个参数寄存器 $a0‑$a7 用于参数传递，前两个参数寄存器 $a0$和$a1$也用于返回值。若一个标量宽度至多 XLEN 位（对于 LP32 ABI，XLEN=32，对于LPX32/LP64，XLEN=64），则它在单个参数寄存器中传递，若没有可用的寄存器，则在栈上传递。若一个标量宽度超过 XLEN 位，不超过 2XLEN 位，则可以在一对参数寄存器中传递，低XLEN 位在小编号寄存器中，高 XLEN 位在大编号寄存器中；若没有可用的参数寄存器，则在栈上传递标量；若只有一个寄存器可用，则低 XLEN位在寄存器中传递，高 XLEN 位在栈上传递。若一个标量宽度大于 2LEN 位，则通过引用传递，并在参数列表中用地址替换。用栈传递的标量会对齐到类型对齐 (Type Alignment) 和 XLEN 中的较大者，但不会超过栈对齐要求。当整型参数传入寄存器或栈时，小于 XLEN 位的整型标量根据其类型的符号扩展至 32 位，然后符号扩展为 XLEN位。以上的说明规定了LoongArch体系结构下传递整数类型的方式，当前我们的系统工作在64位模式下，并且传递的参数不会超过8个，因此可以直接使用8个寄存器传递参数。
-
-### 3.7 特权级切换
-
-通常异常和中断的处理对用户程序来说是透明的，相关软硬件需要保证处理前后原来执行中的代码看到的 CPU 状态保持一致。这意味着开始异常和中断处理程序之前需要保存所有可能被破坏的、原上下文可见的 CPU状态，并在处理完返回原执行流之前恢复。需要保存的上下文包括异常处理代码的执行可能改变的寄存器。发生异常的地址、处理器状态寄存器、中断屏蔽位等现场信息以及特定异常的相关信息（如触发存储访问异常的地址）。异常和中断的处理代码通常在内核态执行，如果它们触发前处理器处于用户态，硬件会自动切换到内核态。这种情况下通常栈指针也会被重新设置为指向内核态代码所使用的栈， 以便隔离不同特权等级代码的运行信息。
-
-在本节中，当 CPU 在用户态特权级（ LoongArch的PLV3模式）运行应用程序，执行到 Trap，切换到内核态特权级（ LoongArch的PLV0模式），批处理操作系统的对应代码响应 Trap，并执行系统调用服务，处理完毕后，从内核态返回到用户态应用程序继续执行后续指令。除了上篇文章提到的几个寄存器外，还需要使用到的寄存器包括:
+在本节中，当 CPU 在用户态特权级（LoongArch的PLV3模式）运行应用程序，执行到 Trap，切换到内核态特权级（LoongArch的PLV0模式），批处理操作系统的对应代码响应 Trap，并执行系统调用服务，处理完毕后，从内核态返回到用户态应用程序继续执行后续指令。除了上篇文章提到的几个寄存器外，还需要使用到的寄存器包括:
 
 **BADV**：出错虚地址
 
@@ -1616,7 +1380,7 @@ LoongArch 的函数调用规范包括了整型调用规范，浮点调用规范�
 - 取指地址错例外(ADEF)，此时记录的是该指令的PC。
 - load/store操作地址错例外(ADEM)
 - 地址对齐错例外(ALE)
-- 边界约束检查错例外（BCE)
+- 边界约束检查错例外(BCE)
 - load操作页无效例外(PIL)
 - store操作页无效例外(PIS)
 - 取指操作页无效例外(PIF)
@@ -1677,98 +1441,91 @@ $$
 
 当异常发生时，主要会经历下面的阶段:
 
-1. 异常处理准备。当异常发生时，CPU 在转而执行异常处理前，硬件需要进行一系列准备工作。首先，需要记录被异常打断的指令的地址（记为 EPTR），TLB 重填异常发生时，这一信息将被记录在CSR.TLBRBERA 中; 机器错误异常发生时，这一信息将被记录在CSR.MERRERA 中，普通异常在CSR.ERA中。其次，调整 CPU 的权限等级（通常调整至最高特权等级）并关闭中断响应。在 LoongArch 指令 系统中，当异常发生时，硬件会将 CSR.PLV置 0 以进入最高特权等级，并将 CSR.CRMD 的 IE 域置 0 以屏蔽所有中断输入。再次，硬件保存异常发生现场的部分信息。在 LoongArch指令系统中，异常发生时会将 CSR.CRMD中的 PLV 和 IE 域的旧值分别记录到 CSR.PRMD 的 PPLV 和 PIE 域中，供后续异常返回时使用。最后，记录异常的相关信息。异常处理程序将利用这些信息完成或加速异常的处理。最常见的如记录异常编号以用于确定异常来源。在 LoongArch 指令系统中，这一信息将被记录在 CSR.ESTAT的 Ecode 和 EsubCode 域，前者存放异常的一级编号，后者存放异常的二级编号。除此以外，有些情况下还会将引发异常的指令的机器码记录在 CSR.BADI 中，或是将造成异常的访存虚地址记录在CSR.BADV 中。
-2. 确定异常来源。不同类型的异常需要各自对应的异常处理。两种处理方式在介绍EENTRY已经说明。
-3. 保存执行状态。在操作系统进行异常处理前，软件要先保存被打断的程序状态，通常至少需要将通用寄存器和程序状态字寄存器的值保存到栈中。也就是下文的trap上下文
-4. 处理异常。跳转到对应异常处理程序进行异常处理。也就是下文的trap_handler函数
+1. 异常处理准备。当异常发生时，CPU 在转而执行异常处理前，硬件需要进行一系列准备工作。首先，需要记录被异常打断的指令的地址（记为 EPTR），TLB 重填异常发生时，这一信息将被记录在CSR.TLBRBERA 中; 机器错误异常发生时，这一信息将被记录在CSR.MERRERA 中，普通异常在CSR.ERA中。其次，调整 CPU 的权限等级（通常调整至最高特权等级）并关闭中断响应。在 LoongArch 指令 系统中，当异常发生时，硬件会将 CSR.PLV置 0 以进入最高特权等级，并将 CSR.CRMD 的 IE 域置 0 以屏蔽所有中断输入。再次，硬件保存异常发生现场的部分信息。在 LoongArch指令系统中，异常发生时会将 CSR.CRMD中的 PLV 和 IE 域的旧值分别记录到 CSR.PRMD 的 PPLV 和 PIE 域中，供后续异常返回时使用。最后，记录异常的相关信息。异常处理程序将利用这些信息完成或加速异常的处理。最常见的如记录异常编号以用于确定异常来源。在 LoongArch 指令系统中，这一信息将被记录在 CSR.ESTAT的 Ecode 和 EsubCode 域，前者存放异常的一级编号，后者存放异常的二级编号。除此以外，有些情况下还会将引发异常的指令的机器码记录在 CSR.BADI 中，或是将造成异常的访存虚地址记录在 CSR.BADV 中。
+2. 确定异常来源。不同类型的异常需要各自对应的异常处理。
+3. 保存执行状态。在操作系统进行异常处理前，软件要先保存被打断的程序状态，通常至少需要将通用寄存器和程序状态字寄存器的值保存到栈中。也就是下文的trap_vector_base。
+4. 处理异常。跳转到对应异常处理程序进行异常处理。也就是下文的loongarch64_trap_handler函数。
 5. 恢复执行状态并返回。在异常处理返回前，软件需要先将前面第 3 个步骤中保存的执行状态从栈中恢复出来，在最后执行异常返回指令。之所以要采用专用的异常返回指令，是因为该指令需要原子地完成恢复权限等级、恢复中断使能状态、跳转至异常返回目标等多个操作。在 LoongArch中，异常返回的指令是 ERTN，该指令会将 CSR.PRMD 的 PPLV 和 PIE 域分别回填至 CSR.CRMD 的 PLV 和IE 域，从而使得 CPU 的权限等级和全局中断响应状态恢复到异常发生时的状态，同时该指令还会将 CSR.ERA 中的值作为目标地址跳转过去。
 
-### 3.8 trap实现（待完善）
+### 3.7 trap实现
 
-检查初始化后的硬件是否正确：
+例外和中断的处理拥有一个统一的入口```trap_vector_base```，该入口位于 modules/axhal/src/arch/loongarch64/trap.S 文件中：
 
-```rust
-pub fn checkout_after_init() {
-    info!(
-        "Direct address translation enabled: {}",
-        Crmd::read().get_da()
-    ); //是否开启直接地址转换
-    info!("Map address translation enabled: {}", Crmd::read().get_pg()); //是否开启映射地址转换
-    info!("TLBRENTRY: {:#x}", TLBREntry::read().get_val()); //打印TLB重填异常的处理程序地址
-}
+```asm
+.section .text
+.balign 4096
+.global trap_vector_base
+trap_vector_base:
+    SAVE_REGS
+
+    bl loongarch64_trap_handler
+
+    LOAD_REGS
+
+    ertn
 ```
+其中```SAVE_REGS```负责保存寄存器的值，```LOAD_REGS```负责恢复寄存器的值：
+```asm
+.macro SAVE_REGS
+	addi.d		$sp, $sp, -{trapframe_size} // allocate space
+	st.d		$sp, $sp, 8*3   // sp
+    st.d		$ra, $sp, 8*1   // ra
 
-读取CSR相关的寄存器：
+    SAVE_ARGUMENT_REGS
+    SAVE_TEMP_REGS
+    SAVE_STATIC_REGS
+    SAVE_CSR_REGS
+	
+	csrrd		$ra, 0x6
+	st.d		$ra, $sp, 8*37  // era
 
+	st.d		$tp, $sp, 8*2   // thread pointer
+	st.d		$r21, $sp, 8*21 // reserved reg
+	st.d		$fp, $sp, 8*22  // frame pointer
+
+	move	$a0, $sp
+.endm
+
+.macro LOAD_REGS
+	ld.d	$sp, $sp, 8*3
+    LOAD_STATIC_REGS
+
+    LOAD_TEMP_REGS
+
+    LOAD_SOME_REGS
+
+	//ld.d	$sp, $sp, 8*3   // sp
+	addi.d		$sp, $sp, {trapframe_size}
+
+.endm
+```
+```loongarch64_trap_handler```是中断和例外的处理函数：
 ```rust
-pub fn test_csr_register() {
+#[no_mangle]
+fn loongarch64_trap_handler(tf: &mut TrapFrame) {
     let estat = Estat::read();
-    info!("estat = {:#x}", estat.get_val());
-    // 打印当前的特权级
-    let crmd = Crmd::read();
-    let spp = crmd.get_plv();
-    info!("Privilege level:{}", spp);
-    // 打印是否开启全局中断
-    let interrupt = crmd.get_ie();
-    info!("global Interrupt:{}", interrupt);
-    // 打印中断入口地址是否同一个
-    let ecfg = Ecfg::read();
-    let add = ecfg.get_vs();
-    info!("vs = {}", add);
-    // 打印中断入口地址
-    let eentry = Eentry::read();
-    let add = eentry.get_eentry();
-    info!("eentry = {:#x}", add);
-    // save 寄存器个数
-    let prcfg1 = Prcfg1::read();
-    let prc = prcfg1.get_save_num();
-    let time_bits = prcfg1.get_timer_bits();
-    info!("save register num:{}", prc);
-    info!("timer bits:{}", time_bits);
-    info!("{:?}", prcfg1);
-    ……
-    // 查看哪些中断被打开了
-    for i in 0..13 {
-        let interrupt = ecfg.get_lie_with_index(i);
-        info!("local_interrupt {}:{}", i, interrupt);
+    match estat.cause() {
+        Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
+        Trap::Interrupt(_) => {
+            let irq_num: usize = tf.estat.trailing_zeros() as usize;
+            crate::trap::handle_irq_extern(irq_num)
+        }
+        _ => {
+            panic!(
+                "Unhandled trap {:?} @ {:#x}:\n{:#x?}",
+                estat.cause(),
+                tf.era,
+                tf
+            );
+        }
     }
 }
 ```
 
-在这里，列出estat寄存器的部分实现，更多trap相关的实现参见https://github.com/aoooos/arceos
+在这里，列出estat寄存器的部分函数实现，更多细节参见 crates/loongarch64/src/register/estat.rs
 
 ```rust
 impl Estat {
-    pub fn get_val(&self) -> usize {
-        self.bits
-    }
-    pub fn set_val(&mut self, val: usize) -> &mut Self {
-        self.bits = val;
-        self
-    }
-    pub fn get_is_with_index(&self, index: usize) -> bool {
-        // 0-12位为中断
-        assert!(index < 13);
-        self.bits.get_bit(index)
-    }
-    // 只有写0和1位有效，这两位控制软件中断
-    pub fn set_is_with_index(&mut self, index: usize, value: bool) -> &mut Self {
-        assert!(index < 13);
-        self.bits.set_bit(index, value);
-        self
-    }
-    // 例外类型一级编码。触发例外时：
-    // 如果是 TLB 重填例外或机器错误例外，该域保持不变；
-    // 否则，硬件会根据例外类型将表 7- 8 中 Ecode 栏定义的数值写入该域。
-    //例外类型一级编号 21-16位
-    pub fn get_ecode(&self) -> usize {
-        self.bits.get_bits(16..=21)
-    }
-    //例外类型二级编号 22-30位
-    pub fn get_esubcode(&self) -> usize {
-        self.bits.get_bits(22..=30)
-    }
-
     pub fn cause(&self) -> Trap {
         // 优先判断是否是重填异常
         let is_tlb_reload = TLBREra::read().get_is_tlbr();
@@ -1778,11 +1535,13 @@ impl Estat {
         let ecode = self.get_ecode();
         if ecode == 0 {
             // 仅当 CSR.ECFG.VS=0 时，表示是中断
-            let ecfg_vs = Ecfg::read().get_vs();
+            let ecfg = Ecfg::read();
+            let ecfg_vs = ecfg.get_vs();
             if ecfg_vs == 0 {
                 // 读取中断位
                 for index in (0..13).rev() {
-                    if self.get_is_with_index(index) {
+                    if self.get_is_with_index(index) && ecfg.get_lie_with_index(index) {
+                        //log::debug!("index={:#x?}", index);
                         return Trap::Interrupt(Interrupt::from_usize(index));
                     }
                 }
@@ -1818,251 +1577,13 @@ impl Estat {
 }
 ```
 
-trap_handle的实现如下:
 
-```rust
-#[no_mangle]
-fn loongarch64_trap_handler(tf: &mut TrapFrame) {
-    let estat = Estat::read();
-    let eentry = Eentry::read();
-    match estat.cause() {
-        Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
-        //Trap::Exception(Exception::StorePageInvalid) | Trap::Exception(Exception::LoadPageInvalid) => test_csr_register(), Trap::Interrupt(_) => crate::trap::handle_irq_extern(estat.bits),
-        _ => {
-            panic!(
-                "Unhandled trap {:?} @ {:#x}:\n{:#x?}",
-                estat.cause(),
-                tf.era,
-                tf
-            );
-        }
-    }
-}
-```
 
 <div STYLE="page-break-after: always;"></div>
 
 
 
-## 4 Task
-
-本章内容共包含parallel、sleep、yield三个功能模块。需要了解的LoongArch相关知识有：
-
-- 任务切换与trap上下文切换的区别
-- 被调用者保存寄存器
-- 时钟中断相关寄存器
-- 计时器
-
-<div STYLE="page-break-after: always;"></div>
-
-### 4.1 任务切换
-
-任务切换和Trap 切换进行比较，会有如下异同：
-
-- 与 Trap 切换不同，它不涉及特权级切换；
-- 与 Trap 切换不同，它的一部分是由编译器帮忙完成的；
-- 与 Trap 切换相同，它对应用是透明的。
-
-大致来看其与一般的函数调用是非常相似的，差别仅仅在于任务切换时会发生栈的替换。根据LoongArch的寄存器规定，32个寄存器中被调用者保存寄存器为s0-s9，还需要保存ra与sp的值，因此任务上下文的定义如下:
-
-ArceOS中关于Trap上下文的定义如下:
-
-```rust
-pub struct TaskContext {
-    pub ra: usize,      // return address
-    pub sp: usize,      // stack pointer
-    pub s: [usize; 10], // loongArch need to save 10 static registers from $r22 to $r31
-}
-```
-
-初始化一个task的context：
-
-```rust
-/// Creates a new default context for a new task.
-    pub const fn new() -> Self {
-        unsafe { core::mem::MaybeUninit::zeroed().assume_init() }
-    }
-```
-
-```rust
-/// Initializes the context for a new task, with the given entry point and
-/// kernel stack.
-pub fn init(&mut self, entry: usize, kstack_top: VirtAddr) {
-    self.sp = kstack_top.as_usize();
-    self.ra = entry;
-}
-```
-
-TaskContext上下文切换：
-
-```rust
-/// Switches to another task.
-    ///
-    /// It first saves the current task's context from CPU to this place, and then
-    /// restores the next task's context from `next_ctx` to CPU.
-    pub fn switch_to(&mut self, next_ctx: &Self) {
-        unsafe {
-            // TODO: switch TLS
-            context_switch(self, next_ctx)
-        }
-    }
-}
-```
-
-这段代码使用内联汇编（asm! 宏）编写了一个汇编语言函数 `context_switch`，用于在两个任务的上下文之间进行切换。
-
-```rust
-#[naked]
-unsafe extern "C" fn context_switch(_current_task: &mut TaskContext, _next_task: &TaskContext) {
-    asm!(
-        "
-        // save old context (callee-saved registers)
-        st.d     $ra, $a0, 0
-        st.d     $sp, $a0, 1 * 8
-        st.d     $s0, $a0, 2 * 8
-        st.d     $s1, $a0, 3 * 8
-        st.d     $s2, $a0, 4 * 8
-        st.d     $s3, $a0, 5 * 8
-        st.d     $s4, $a0, 6 * 8
-        st.d     $s5, $a0, 7 * 8
-        st.d     $s6, $a0, 8 * 8
-        st.d     $s7, $a0, 9 * 8
-        st.d     $s8, $a0, 10 * 8
-        st.d     $fp, $a0, 11 * 8
-
-        // restore new context
-        ld.d     $ra, $a1, 0
-        ld.d     $s0, $a1, 2 * 8
-        ld.d     $s1, $a1, 3 * 8
-        ld.d     $s2, $a1, 4 * 8
-        ld.d     $s3, $a1, 5 * 8
-        ld.d     $s4, $a1, 6 * 8
-        ld.d     $s5, $a1, 7 * 8
-        ld.d     $s6, $a1, 8 * 8
-        ld.d     $s7, $a1, 9 * 8
-        ld.d     $s8, $a1, 10 * 8
-        ld.d     $fp, $a1, 11 * 8
-        ld.d     $sp, $a1, 1 * 8
-    
-        jr $ra",
-        options(noreturn),
-    )
-
-}
-```
-
-### 4.2 时钟（注意，实现代码部分需要做调整）
-
-在多道程序和协作式调度的基础上，应用程序可以各自获得处理器的使用权了，但这仍然需要应用程序的编写者主动地去让出处理器，如果某个应用程序不主动让出，那么其它的任务将永远不会获得使用权。为了使得操作系统对应用程序的管理更加公平合理，需要完成
-
-- 分时多任务：操作系统管理每个应用程序，以时间片为单位来分时占用处理器运行应用。
-- 时间片轮转调度：操作系统在一个程序用完其时间片后，就抢占当前程序并调用下一个程序执行，周而复始，形成对应用程序在任务级别上的时间片轮转调度。
-
-在前文中已经大致介绍了LoongArch上的中断，各中断源发来的中断信号被处理器采样至CSR.ESTAT.IS 域中，这些信息与软件配置在 CSR.ECFG.LIE域中的局部中断使能信息按位与，得到一个 13 位中断向量int_vec。当 CSR.CRMD.IE=1 且 int_vec 不为全0 时，处理器认为有需要响应的中断，于是从执行的指令流中挑选出一条指令，将其标记上一种特殊的例外——中断例外。随后处理器硬件的处理过程与普通例外的处理过程一样了。LoongArch平台上的时钟中断与risc-v的不相同，与时钟中断相关的寄存器如下:
-
-**TID**：定时器编号
-
-处理器中每个定时器都有一个唯一可识别的编号，由软件配置在该寄存器中。每个定时器也同时唯一对应着一个计时器，当软件使用RDTIME指令读取计时器数值时，一并返回的计时器ID号也就是与之对应的定时器编号。
-
-![image-20230813193007245](image/image-20230813193007245.png)
-
-**TCFG**：定时器配置
-
-该寄存器是软件配置定时器的接口。定时器的有效位数由实现决定，因此该寄存器中TimeVal域的位宽也将随之变化。
-
-![image-20230813193118699](image/image-20230813193118699.png)
-
-**TVAL**：定时器数值
-
-软件可通过读取该寄存器来获知定时器当前的计数值。定时器的有效位数由实现决定，因此该寄存器中TimeVal域的位宽也将随之变化。
-
-![image-20230813193225501](image/image-20230813193225501.png)
-
-为了打开时钟中断，不仅需要开启全局中断和时钟中断对应的局部使能中断，还需要配置CSR.TCFG中的En位。时钟的中断频率由TCFG.Initval位决定，在risc-v中每次发生时钟中断，都需要配置mtimecmp寄存器的值，在LoongArch上，只需要开启TCFG.Periodic位就可以使得在发生时钟中断后不用在手动更新下一次发生中断的时间。
-
-~~开启时钟中断的代码如下：~~
-
-```
-pub fn enable_timer_interrupt() {
-
-Ticlr::read().clear(); //清除时钟专断
-
-Tcfg::read()
-
-.set_enable(true) //开启计时
-
-.set_loop(true) //开启循环
-
-.set_tval(0x100000usize) //设置中断间隔时间
-
-.flush(); //写入计时器的配置
-
-Ecfg::read().set_local_interrupt(11, true); //开启局部使能中断
-
-Crmd::read().set_interrupt_enable(true); //开启全局中断
-
-}
-```
-
-~~时钟中断对应的处理代码如下：~~
-
-```
-fn timer_handler() {
-
-let mut ticlr = Ticlr::read();
-
-ticlr.set_val(ticlr.get_val() | CSR_TICLR_CLR); //清除时钟中断
-
-suspend_current_run_next();
-
-}
-```
-
-~~龙芯指令系统定义了一个恒定频率计时器，其主体是一个 64 位的计数器，称为 Stable Counter。Stable Counter 在复位后置为 0，随后每个计数时钟周期自增 1，当计数至全 1 时自动绕回至 0继续自增。同时每 个计时器都有一个软件可配置的全局唯一编号，称为 Counter ID。恒定频率计时器的特点在于其计时频率 在复位后保持不变，无论处理器核的时钟频率如何变化。获取计时器的实现如下:~~
-
-```
-pub struct Time {}
-
-impl Time {
-
-pub fn read() -> usize {
-
-let mut counter:usize;
-
-unsafe {
-
-asm!(
-
-"rdtime.d {},{}",
-
-out(reg)counter,
-
-out(reg)_,
-
-);
-
-}
-
-counter
-
-}
-
-}
-```
-
-
-
-### 4.3 parallel（待写）
-
-### 4.4 sleep（待写）
-
-### 4.5 yield（待写）
-
-<div STYLE="page-break-after: always;"></div>
-
-
-
-## 5 Memtest
+## 4 Memory
 
 本章内容是在LoongArch平台上遇到的与大量硬件相关的第一次尝试，这一章中，不仅需要了解LoongArch上大量的寄存器以及其功能，并且需要知道risc-v和其在地址空间管理上的差别，比如映射地址空间，以及手动管理TLB等。而且由于开启了页表的缘故，debug的过程也可能比较艰难，因此需要细细品读相关的细节。
 
@@ -2076,9 +1597,9 @@ counter
 
 <div STYLE="page-break-after: always;"></div>
 
-### 5.1 寄存器设计
+### 4.1 寄存器设计
 
-在 risc-v 或者 x86 平台，Rust均有对应的库支持，里面包含各种寄存器操作或者IO操作的抽象，而对LoongArch平台的支持的库少之又少，在前面的实验中虽然对LoongArch的部分寄存器也进行了抽象，但使用起来仍然比较不方便，因此在开始这一章的实验前，需要对LoongArch平台上的相关寄存器添加支持，类似于建立一个crate，方便后面的代码对寄存器进行操作。
+在 risc-v、 x86、arm 等平台，Rust 均有对应的库支持，里面包含各种寄存器操作或者IO操作的抽象，而对 LoongArch 平台的支持的库较少，在前面的实验中虽然对LoongArch的部分寄存器也进行了抽象，但使用起来仍然比较不方便，因此在开始这一章的实验前，需要对LoongArch平台上的相关寄存器添加支持，建立一个crate，方便后面的代码对寄存器进行操作。
 
 LoongArch下的控制状态寄存器包含如下：
 
@@ -2171,7 +1692,7 @@ fn write(&mut self);
 }
 ```
 
-因此，如果想要写一个寄存器必须将其先读出，虽然这可能带来一定的性能损失，因为可能有人会选择直接设置寄存器的值，但经过思考，大部分控制状态寄存器的值是不会被修改的，只有某些位的值需要我们修改，因此可以在读出其值的情况下再去设置某个位，这样一来就避免了手动查看寄存器各个位的默认值然后再设置整个值带来的复杂性，因此这里选择了这种读出写入的模式。
+因此，在编写寄存器时的一种良好实践是在进行写入操作之前必须首先进行读取操作。尽管这种方法可能会带来一定的性能开销，因为某些情况下可能会直接选择设置寄存器的值，然而经过思考，大多数控制状态寄存器的值通常不会被频繁修改，仅有某些位的值需要进行调整。因此，更为有效的做法是，在读取寄存器的当前值的基础上，有选择地进行位的设置，从而避免了手动查阅寄存器各个位的默认值并随后设置整个值所带来的复杂性。因此，在此情境下，我们选择采用这种读取-写入模式，以实现操作的简化与优化。
 
 比如CRMD寄存器各个位的定义如下:
 
@@ -2247,15 +1768,69 @@ fn write(&mut self) {
 
 其它的寄存器与上面的实现是类似的，这里就不再给出各个寄存器的详细实现，可以查看源代码以获取更多详细。实验中实现了图标给出的大部分寄存器，部分未使用到的寄存器也可以按照上述方法较为容易实现。这里给出实验中完成的寄存器:
 
-![image-20230813200408665](image/image-20230813200408665.png)
+```
+.
+├── asm.rs
+├── consts.rs
+├── cpu.rs
+├── extioi.rs
+├── ipi.rs
+├── lib.rs
+├── loongson.rs
+├── ls7a.rs
+├── mem.rs
+├── mod.rs
+├── register
+│   ├── badi.rs
+│   ├── badv.rs
+│   ├── cpuid.rs
+│   ├── crmd.rs
+│   ├── csr.rs
+│   ├── dmwn.rs
+│   ├── ecfg.rs
+│   ├── eentry.rs
+│   ├── era.rs
+│   ├── estat.rs
+│   ├── misc.rs
+│   ├── mod.rs
+│   ├── prcfg1.rs
+│   ├── prcfg2.rs
+│   ├── prcfg3.rs
+│   ├── prmd.rs
+│   ├── rvacfg.rs
+│   ├── saven.rs
+│   ├── tcfg.rs
+│   ├── ticlr.rs
+│   ├── time.rs
+│   └── tval.rs
+├── rtc.rs
+└── tlb
+    ├── asid.rs
+    ├── mod.rs
+    ├── pgdh.rs
+    ├── pgdl.rs
+    ├── pgd.rs
+    ├── pwch.rs
+    ├── pwcl.rs
+    ├── sltbps.rs
+    ├── stlbps.rs
+    ├── tlbehi.rs
+    ├── tlbelo.rs
+    ├── tlbentry.rs
+    ├── tlbidx.rs
+    ├── tlbrbadv.rs
+    ├── tlbrehi.rs
+    ├── tlbrelo.rs
+    ├── tlbrera.rs
+    ├── tlbrprmd.rs
+    └── tlbrsave.rs
+```
 
-![image-20230813200447931](image/image-20230813200447931.png)
+LoongArch 定义了一个 CPUCFG 指令，用于软件在执行过程中动态识别所运行的处理器中实现了龙芯架构中的哪些功能特性。这些指令系统功能特性的实现情况记录在一系列配置信息字中，CPUCFG 指令执行一次可以读取一个配置信息字。
 
-loonarch定义了一个CPUCFG指令，用于软件在执行过程中动态识别所运行的处理器中实现了龙芯架构中的哪些功能特性。这些指令系统功能特性的实现情况记录在一系列配置信息字中，CPUCFG 指令执行一次可以读取一个配置信息字。
+配置信息字中包含一系列配置位（域），其记录形式为 CPUCFG.<配置字号>.<配置信息助记名称>[位下 标]，其中单比特配置位的位下标记为 bitXX，表示配置字的第 XX 位；多比特的配置域的位下标记为 bitXX:YY，表示配置字的第 XX 位到第 YY 位的连续(XX-YY+1)位。例如，1 号配置字中的第 0 位用以表示是否实现 LA32架构，将这个配置信息记录为 CPUCFG.1.LA32[bit0]，其中 1 表示配置信息字的字号是 1 号，LA32 表示这个配置信息域所起的助记名称叫做 LA32，bit0 表示 LA32这个域位于配置字的第 0 位。1 号配置字中第 11位到第 4 位的记录所支持物理地址位数的 PALEN域则记为 CPUCFG.1.PALEN[bit11:4]。
 
-配置信息字中包含一系列配置位（域），其记录形式为 CPUCFG.<配置字号>.<配置信息助记名称>[位下 标]，其中单比特配置位的位下标记为 bitXX，表示配置字的第 XX 位；多比特的配置域的位下标记为 bitXX:YY，表示配置字的第 XX 位到第 YY 位的连续(XX-YY+1)位。例如，1 号配置字中的第 0 位用以表示是否实现 LA32架构，将这个配置信息记录为 CPUCFG.1.LA32[bit0]，其中 1 表示配置信息字的字号是 1 号，LA32 表示这个配置信息域所起的助记名称叫做 LA32，bit0 表示 LA32这个域位于配置字的第 0 位。1 号配置字中第 11位到第 4 位的记录所支持物理地址位数的 PALEN域则记为 CPUCFG.1.PALEN[bit11:4]
-
-配置字包含的信息很多，可以查看提供的文档了解各个配置字含义，这里给出第1，2个配置字各位的含义，在本章节中，只实现了几个暂时需要使用的配置字。
+配置字包含的信息很多，可以查看提供的文档了解各个配置字含义，这里给出第1、2个配置字各位的含义，在本章节中，只实现了几个暂时需要使用的配置字。
 
 ![image-20230813201543263](image/image-20230813201543263.png)
 
@@ -2304,95 +1879,15 @@ pub fn get_ual() -> bool {
 }
 ```
 
-在实验中，在完成中断和异常初始化后会打印当前机器的相关信息，从这个函数中我们可以看到各个寄存器和cpu配置字的使用方法。
-
-```rust
-// 打印硬件的相关信息
-pub fn print_machine_info() {
-    info!("PALEN: {}", get_palen()); //支持的物理地址范围
-    info!("VALEN: {}", get_valen()); //支持的虚拟地址范围
-    info!("Support MMU-Page :{}", get_mmu_support_page());
-    info!("Support Read-only :{}", get_support_read_forbid());
-    info!(
-        "Support Execution-Protect :{}",
-        get_support_execution_protection()
-    );
-    info!("Support RPLV: {}", get_support_rplv()); //是否支持吃rplv页属性
-    info!("Support RVA: {}", get_support_rva()); //是否支持虚拟地址缩减
-    info!("Support RVAMAX :{}", get_support_rva_len()); //支持的虚拟地址缩减的长度
-    info!("Support Page-Size: {:#x}", Prcfg2::read().get_val()); //支持的页大小,
-    info!("Support LSPW: {}", get_support_lspw());
-    match Prcfg3::read().get_tlb_type() {
-        0 => {
-            info!("No TLB");
-        }
-        1 => {
-            info!("Have MTLB");
-        }
-        2 => {
-            info!("Have STLB + MTLB");
-        }
-        _ => {
-            info!("Unknown TLB");
-        }
-    }
-    info!("MLTB Entry: {}", Prcfg3::read().get_mtlb_entries()); //MTLB的页数量
-    info!("SLTB Ways :{}", Prcfg3::read().get_stlb_ways()); //STLB的路数量
-    info!("SLTB Entry: {}", Prcfg3::read().get_sltb_sets()); //STLB每一路的项数
-    info!("SLTB Page-size: {}", StlbPs::read().get_page_size()); //STLB的页大小
-    info!("PTE-size: {}", Pwcl::read().get_pte_width()); //PTE的大小
-    info!("TLB-RFill entry_point: {:#x}", TLBREntry::read().get_val()); //TLB重新加载的入口地址
-    info!("TLB-RFill page-size :{}", TlbREhi::read().get_page_size()); //TLB重新加载的页大小
-    let pwcl = Pwcl::read();
-    info!(
-        "PT-index-width: {},{}",
-        pwcl.get_ptbase(),
-        pwcl.get_ptwidth()
-    ); //PT的索引宽度
-    info!(
-        "dir1-index-width: {},{}",
-        pwcl.get_dir1_base(),
-        pwcl.get_dir1_width()
-    ); //dir1的索引宽度
-    let pwch = Pwch::read();
-    info!(
-        "dir2-index-width: {},{}",
-        pwcl.get_dir2_base(),
-        pwcl.get_dir2_width()
-    ); //dir2的索引宽度
-    info!(
-        "dir3-index-width: {},{}",
-        pwch.get_dir3_base(),
-        pwch.get_dir3_width()
-    ); //dir3的索引宽度
-    info!(
-        "dir4-index-width: {},{}",
-        pwch.get_dir4_base(),
-        pwch.get_dir4_width()
-    ); //dir4的索引宽度
-    let crmd = Crmd::read();
-    info!("DA: {}", crmd.get_da()); //是否支持DA模式
-    info!("PG :{}", crmd.get_pg()); //是否支持PG模式
-    info!("DATF: {}", crmd.get_datf()); //
-    info!("DATM :{}", crmd.get_datm()); //
-    info!("CRMD :{:#x}", crmd.get_val()); //
-    let misc = Misc::read().get_enable_32_in_plv3();
-    info!("MISC: enable_32_in_plv3 :{}", misc); //是否支持32位在PLV3模式下运行
-    info!("dmwo: {:#x}", Dmw0::read().get_value());
-    info!("dmw1: {:#x}", Dmw1::read().get_value());
-    info!("PLV: {}", crmd.get_plv()); //当前的特权等级
-}
-```
-
 有了上述实现的支持，在后续的实现中就可以很方便地查看和配置LoongArch机器上各种属性了。
 
-### 5.2 存储管理
+### 4.2 存储管理
 
 LoongArch管理的内存物理地址空间范围是：0 − 2 PALEN−1。在 LA32 架构下，PALEN 理论上是一个不超过 36 的正整数，由实现决定其具体的值，通常建议为 32。在 LA64 架构下，PALEN理论上是一个不超过 60 的正整数，由实现决定其具体的值。系统软件可以通过 CPUCFG 读取配置字 0x1 的 PALEN 域来确定 PALEN 的具体值。
 
 LoongArch架构中虚拟地址空间是线性平整的。对于 PLV0 级来说，LA32 架构下虚拟地址空间大小为2^32字节，LA64 架构下虚拟地址空间大小为64字节。不过对于 LA64 架构来说，2^64字节大小的虚拟地址空间并不都是合法的，可以认为存在一些虚拟地址的空洞。合法的虚拟地址空间与地址映射模式紧密相关。并且对于应用程序来说，在 LA32 架构下，应用软件能够访问的内存地址空间范围是：0 − (2^31 − 1)， 在 LA64 架构下，应用软件能够访问的内存地址空间范围是：0 − 2^V ALEN − 1。这里 VALEN 理论上是一个小于 等于 64 的整数，由实现决定其具体的值，应用软件可以通过执行 CPUCFG指令读取 0x1 号配置字的 VALEN 域来确定 VALEN 的具体值。
 
-LoongArch的MMU 支持两种虚实地址翻译模式：直接地址翻译模式和映射地址翻译模式
+LoongArch的MMU 支持两种虚实地址翻译模式：直接地址翻译模式和映射地址翻译模式。
 
 当 CSR.CRMD 的 DA=1 且 PG=0 时，处理器核的 MMU 处于直接地址翻译模式。在这种映射模式下，物理地址默认直接等于虚拟地址的[PALEN-1:0]位（不足补 0），除非具体实现中采用了其它优先级更高的虚实地址 翻译规则。可以看到此时整个虚拟地址空间都是合法的。处理器复位结束后将进入直接地址翻译模式。当 CSR.CRMD 的 DA=0 且 PG=1 时，处理器核的 MMU 处于映射地址翻译模式。具体又分为直接映射地址翻译模式（简称“直接映射模式”）和页表映射地址翻译模式（简称“页表映射模式”）两种。翻译地址时将优先看其能否按照直接映射模式进行翻译，无法进行后再按照页表映射模式进行翻译。
 
@@ -2416,7 +1911,7 @@ LoongArch架构下支持三种存储访问类型，分别是：一致可缓存�
 
 关于页表的内容在下一小节将着重介绍。
 
-### 5.3 多级页表硬件机制
+### 4.3 多级页表硬件机制
 
 处理器的存储管理部件（Memory Management Unit，简称 MMU）支持虚实地址转换、多进程空间等功能，是通用处理器体现 “通用性” 的重要单元，也是处理器和操作系统交互最紧密的部分。存储管理构建虚拟的内存地址，并通过 MMU 进行虚拟地址到物理地址的转换。存储管理的作用和意义包括以下方面。
 
@@ -2461,11 +1956,9 @@ STLB 和 MTLB 的表项格式基本一致，区别仅在于 MTLB 每个表项均
 
 如果查找到一个命中项，那么根据命中项的页大小和待查虚地址确定 vaddr 具体落在双页中的哪一页，从奇偶两个页表项取出对应页表项作为命中页表项。如果命中页表项的 V 等于 0，说明该页表项无效，将触发页无效异常，具体将根据访问类型触发对应的 load 操作页无效异常（PIL）、store操作页无效异常（PIS）或取指操作页无效异常（PIF）。
 
-如果命中页表项的 V 值等于 1，但是访问的权限等级不合规，将触发页权限等级不合规异常（PPI）。权限等级不合规体现为，该命中页表项的 RPLV 值等于 0 且 CSR.CRMD 中 PLV 域的值大于命中页表项中的 PLV 值，或是该命中页表项的 RPLV=1且 CSR.CRMD 中 PLV 域的值不等于命
+如果命中页表项的 V 值等于 1，但是访问的权限等级不合规，将触发页权限等级不合规异常（PPI）。权限等级不合规体现为，该命中页表项的 RPLV 值等于 0 且 CSR.CRMD 中 PLV 域的值大于命中页表项中的 PLV 值，或是该命中页表项的 RPLV=1且 CSR.CRMD 中 PLV 域的值不等于命中页表项中的 PLV 值。
 
-中页表项中的 PLV 值。
-
-如果上述检查都合规，还要进一步根据访问类型进行检查。如果是一个 load 操作，但是命中页表项中的 NR 值等于 1， 将触发页不可读异常（PNR）；如果是一个 store 操作，但是命中页表项中的 D 值等于 0， 将触发页修改异常（PME）；如果是一个取指操作，但是命中页表项中的 NX 值等于 1， 将触发页不可执行异常（PNX）。
+如果上述检查都合规，还要进一步根据访问类型进行检查。如果是一个 load 操作，但是命中页表项中的 NR 值等于 1， 将触发页不可读异常（PNR）；如果是一个 store 操作，但是命中页表项中的 D 值等于 0， 将触发页修改异常（PME）；如果是一个取指操作，但是命中页表项中的 NX 值等于 1，将触发页不可执行异常（PNX）。
 
 如果找到了命中项且经检查上述异常都没有触发，那么命中项中的 PPN 值和 MAT 值将被取出，前者用于和 vaddr中提取的页内偏移拼合成物理地址 paddr，后者用于控制该访问操作的内存访问类型属性。
 
@@ -2473,7 +1966,7 @@ LoongArch 指令系统中用于访问和控制 TLB 的控制状态寄存器大�
 
 ![image-20230813203716117](image/image-20230813203716117.png)
 
-上述寄存器中，第二类专用于 TLB 重填异常处理场景（CSR.TLBRERA 的 IsTLBR 域值等于 1）的控制寄存器，其设计目的是确保在非 TLB 重填异常处理程序执行过程中嵌套发生 TLB 重填异常处理。后，原有异常处理程序的上下文不被破坏。例如，当发生 TLB 重填异常时，其异常处理返回地址将填入 CSR.TLBRERA 而非 CSR.ERA，这样被嵌套的异常处理程序返回时所用的返回目标就不会被破坏。因硬件上只维护了这一套保存上下文专用的寄存器，所以需要确保在 TLB 重填异常处理过程中不再触发 TLB 重填异常，为此，处理器因 TLB 重填异常触发而陷入异常处理后，硬件会自动将虚实地址翻译模式调整为直接地址翻译模式，从而确保 TLB 重填异常处理程序第一条指令的取指和访存6一定不会触发 TLB 重填异常，与此同时，软件设计人员也要保证后续 TLB 重填异常处理返回前的所有指令的执行不会触发 TLB 重填异常。
+上述寄存器中，第二类专用于 TLB 重填异常处理场景（CSR.TLBRERA 的 IsTLBR 域值等于 1）的控制寄存器，其设计目的是确保在非 TLB 重填异常处理程序执行过程中嵌套发生 TLB 重填异常处理。后，原有异常处理程序的上下文不被破坏。例如，当发生 TLB 重填异常时，其异常处理返回地址将填入 CSR.TLBRERA 而非 CSR.ERA，这样被嵌套的异常处理程序返回时所用的返回目标就不会被破坏。因硬件上只维护了这一套保存上下文专用的寄存器，所以需要确保在 TLB 重填异常处理过程中不再触发 TLB 重填异常，为此，处理器因 TLB 重填异常触发而陷入异常处理后，硬件会自动将虚实地址翻译模式调整为直接地址翻译模式，从而确保 TLB 重填异常处理程序第一条指令的取指和访存一定不会触发 TLB 重填异常，与此同时，软件设计人员也要保证后续 TLB 重填异常处理返回前的所有指令的执行不会触发 TLB 重填异常。
 
 当触发 TLB 重填异常时，除了更新 CSR.CRMD 外，CSR.CRMD 中 PLV、IE 域的旧值将被记录到CSR。TLBRPRMD 的相关域中，异常返回地址也将被记录到 CSR.TLBRERA 的 PC 域中，处理器还会将引发该异常的访存虚地址填入 CSR.TLBRBAV 的 VAddr 域并从该虚地址中提取虚双页号填入CSR.TLBREHI的 VPPN 域。当触发非 TLB 重填异常的其他 TLB 类异常时，除了像普通异常发生时一样更新 CRMD、PRMD 和 ERA 这些控制状态寄存器的相关域外，处理器还会将引发该异常的访存虚地址填入CSR.BADV 的 VAddr 域并从该虚地址中提取虚双页号填入 CSR.TLBEHI 的 VPPN域。
 
@@ -2493,29 +1986,25 @@ INVTLB 指令用于无效 TLB 中符合条件的表项，即从通用寄存器 r
 
 **多级页表结构**
 
-LoongArch处理器与risc-v处理器不同之处在于risc-v是根据satp寄存器的Mode域决定分页机制，而LoongArch上在获取到其虚拟地址位宽后可以设置不同的页大小从而得到不同的多级页表结构，如果其有效虚地址位宽为 48 位，那么当 操作系统采用 16KB 页大小时，其页表为三级结构，如下图所示:
+LoongArch处理器与risc-v处理器不同之处在于risc-v是根据satp寄存器的Mode域决定分页机制，而LoongArch上在获取到其虚拟地址位宽后可以设置不同的页大小从而得到不同的多级页表结构，如果其有效虚地址位宽为 48 位，那么当操作系统采用 4KB 页大小时，其页表为四级结构：
 
-![image-20230813204451961](image/image-20230813204451961.png)
+36 位的虚双页号（VPPN）分为四个部分：最高 9 位作为四级页表索引，四级页表中每一项保存一个三级页表的起始地址；次高 9 位作为三级页表索引，三级页表中每一项保存一个二级页表的起始地址；次低 9 位作为二级页表索引，二级页表中每一项保存一个一级页表的起始地址；最低 9 位作为一级页表索引。每级页表包含 512 个页表项，每个页表项管理一个物理页，大小为 8 字节，包括RPLV、NX、NR、PPN、W、P、G、MAT、PLV、D、V 的信息。“P” 和 “W” 两个域分别代表物理页是否存在，以及该页是否可写。这些信息虽然不填入 TLB 表项中，但用于页表遍历的处理过程。被遍历页表最顶层目录的基址 PGD 需要根据被查询虚地址的第 (PALEN-1) 位决定，当该位为 0 时，PGD 来自于 CSR.PGDL；当该位为 1 时，PGD 来自于 CSR.PGDH，这意味着整个页表结构为 (PALEN-1)比特。在 ArceOS 中我们只会使用 PGDL。
 
-33 位的虚双页号（VPPN）分为三个部分：最高 11 位作为一级页表（页目录表 PGD）索引，一级页表中每 一项保存一个二级页表（页目录表 PMD）的起始地址；中间 11 位作为二级页表索引，二级页表中每一项保存一个三级页表（末级页表 PTE）的起始地址；最低 11 位作为三级页表索引。每个三级页表包含 2048 个页表项，每个页表项管理一个物理页，大小为 8 字节，包括RPLV、NX、NR、PPN、W、P、G、MAT、PLV、D、V 的信息。“P” 和 “W” 两个域分别代表物理页是否存在，以及该页是否可写。这些信息虽然不填入 TLB 表项中，但用于页表遍历的处理过程。每个进程的 PGD 表基地址放在进程上下文中，内核进程进行切换时把 PGD 表的基地址写到CSR.PGDH 的 Base 域中，用户进程进行切换时把 PGD 表的基地址写到 CSR.PGDL 的 Base 域中。在实验中我们只会使用PGDL，上述说明用于完善的操作系统中，因为完善的操作系统内核会被放置于内存的高位区域中，应用程序位于低地址区域中，但本实验中内核与应用程序都位于同一段物理内存区间。
-
-页表项的定义总共包含两种，上图是其中一种：
+页表项的定义总共包含两种：
 
 ![image-20230813204550073](image/image-20230813204550073.png)
 
 
-
 这里我们不关注大页页表项格式。
 
-因此除了三级页表外，如果设置页大小不同，那么得到的多级页表页不相同，但总体而言，多级页表的格式如下:
+因此除了四级页表外，如果设置页大小不同，那么得到的多级页表页不相同，但总体而言，多级页表的格式如下:
 
 ![image-20230813204241435](image/image-20230813204241435.png)
 
-本实验会采用该四级页表完成。
 
-### 5.5 多级页表实现（看一下代码）
+### 4.4 多级页表实现
 
-通过CPUCFG指令获取系统配置后，在将页大小规定位4kb后，将会构成四级页表。
+通过CPUCFG指令获取系统配置后，在将页大小规定位4KB后，将会构成四级页表。
 
 在地址相关的数据结构抽象与类型定义中，我们可以定义页的大小：
 
@@ -2562,7 +2051,7 @@ bitflags::bitflags! {
 }
 ```
 
-上述所有位都不会被硬件自动修改，在发生TLB相关的异常时，我们可能需要手动查找到页表项并进行修改，:
+在发生TLB相关的异常时，我们需要手动查找到页表项并进行修改:
 
 这段代码是在实现一个用于页表管理的元数据类型 `PagingMetaData` 的 trait 为 `LA64MetaData` 结构体。这个 trait 定义了用于管理页表的一些元数据，如页表的级数、物理地址和虚拟地址的最大位数等。
 
@@ -2576,7 +2065,7 @@ bitflags::bitflags! {
 
 对页表项相关的函数也做了修改，给出部分函数实现：
 
-下面代码实现了一个用于调试目的的 Rust 特性（trait），即 `fmt::Debug`，用于格式化打印一个名为 `PageTable64` 的泛型类型的实例。通过实现这个特性，可以以易于理解的格式将类型实例的字段信息打印出来，有助于调试和理解代码的执行过程。在实现中，使用了格式化器来准备和处理输出，将实例的字段和对应的值添加到输出中，最终生成可读性强的调试信息。这段代码使得通过 `println!` 或 `format!` 宏可以方便地输出 `PageTable64` 实例的内容，便于开发者检查和定位问题
+下面代码实现了一个用于调试目的的 Rust 特性（trait），即 `fmt::Debug`，用于格式化打印一个名为 `PageTable64` 的泛型类型的实例。通过实现这个特性，可以以易于理解的格式将类型实例的字段信息打印出来，有助于调试和理解代码的执行过程。在实现中，使用了格式化器来准备和处理输出，将实例的字段和对应的值添加到输出中，最终生成可读性强的调试信息。这段代码使得通过 `debug!` 宏可以方便地输出 `PageTable64` 实例的内容，便于开发者检查和定位问题
 
 ```rust
 impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> fmt::Debug for PageTable64<M, PTE, IF> {
@@ -2589,7 +2078,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> fmt::Debug for PageTable6
 }
 ```
 
-定义了一个名为 `try_new` 的公共方法，目的是创建一个新的页表实例。这个方法是为了泛型类型 `PageTable64<M, PTE, IF>` 而设计的。该方法的核心目标是在操作系统中管理内存分页的过程中，为新的页表创建一个起始点。
+下面代码定义了一个名为 `try_new` 的公共方法，目的是创建一个新的页表实例。这个方法是为了泛型类型 `PageTable64<M, PTE, IF>` 而设计的。该方法的核心目标是在操作系统中管理内存分页的过程中，为新的页表创建一个起始点。
 
 ```rust
 impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
@@ -2605,14 +2094,6 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         }
 ```
 
-定义了一个名为 `root_paddr` 的方法，目的是返回根页表的物理地址。
-
-```rust
-/// Returns the physical address of the root page table.
-pub const fn root_paddr(&self) -> PhysAddr {
-    self.root_paddr
-}
-```
 
 下面代码在内存分页管理中为页表分配一个新的页，将其清零，并返回物理地址。这对于操作系统来说是非常重要的，因为它为分页系统的构建提供了所需的内存空间。
 
@@ -2628,6 +2109,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
             Err(PagingError::NoMemory)
         }
     }
+}
 ```
 
 `table_of` 方法的作用是接受一个物理地址作为输入，将其转换为虚拟地址，并将其解释为页表项数组的起始地址。通过返回这个数组的引用，方法提供了一种简便的方式来访问页表中的页表项，用于操作系统的内存分页管理和地址转换过程。注意，使用不安全的操作来处理指针和地址需要谨慎，因为它们可能导致内存安全问题。
@@ -2677,23 +2159,9 @@ fn next_table_mut_or_create<'a>(&mut self, entry: &mut PTE) -> PagingResult<&'a 
 }
 ```
 
-综上所述，`next_table_mut` 方法的作用是在内存分页管理中，基于给定的页表项，获取下一级页表的可变引用。通过条件判断，它确保页表项的状态满足要求，然后返回对应下一级页表的引用，以供操作系统动态地管理和修改页表。这对于操作系统的地址映射和内存管理非常重要。
-
-```rust
-fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
-    if !entry.is_present() {
-        Err(PagingError::NotMapped)
-    } else if entry.is_huge() {
-        Err(PagingError::MappedToHugePage)
-    } else {
-        Ok(self.table_of_mut(entry.paddr()))
-    }
-}
-```
 
 
-
-上述用于创建、映射和管理虚拟内存与物理内存之间的映射关系。以下是主要组成部分的功能解释：
+上述代码主要用于创建、映射和管理虚拟内存与物理内存之间的映射关系。以下是主要组成部分的功能解释：
 
 1. `impl PageTable64<M, PTE, IF> { ... }`: 为 `PageTable64` 结构实现一系列方法来创建、映射和操作页表。
    - `try_new()`: 尝试创建一个新的页表实例。会分配一个根页表，并初始化一些字段。
@@ -2714,15 +2182,11 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
 
 这段代码实现了一个通用的64位页表结构，可以用于操作系统中的虚拟内存管理。它提供了映射、查询、取消映射、遍历等操作，并支持分配和释放页表等功能。这是操作系统中重要的组成部分，用于实现虚拟地址到物理地址的映射和管理。
 
-### 5.6 地址空间（待写）
 
-在ArceOS中，当开启页表机制后，内核代码与应用程序代码均需要通过地址转换，因此在开启页表前需要为内核构建好地址空间。但是在LoongArch平台上，有了前文所述的直接映射窗口机制，就可以免去构建内核地址空间的工作，只为用户程序构建地址空间。
+## 5 致谢
 
-我们知道，内核与应用程序使用着BIOS提供的便利，直接访问着物理内存，因此应用程序就可以无视限制直接修改内存的内容。因此我们可以充分利用LoongArch提供的直接映射窗口机制和页表对应用程序的内存访问做出限制，并且降低构建内核地址空间和应用地址空间的难度。
+2023年5月，我们团队成员在 Rust 语言、操作系统内核开发方面的经验可以说是一片空白，然而，凭借着队员们的不懈努力，我们成功地进入了决赛。截至8月15日，团队成员已经有了显著进步。我们现在熟悉了 Rust 语言、Unikernel 操作系统、make 项目构建工具、LoongArch 架构指令、qemu模拟器、gdb 调试工具等，从纯粹的系统小白变得没那么纯粹了。
 
-### 5.7 TLB重填（待写）
+我们的进步得益于陈渝老师和张福新老师的辛勤指导和付出，也得益于徐淮师兄、刘庆涛师兄、陈林峰学长、李明老师以及hev老师的大力帮助，他们不仅为团队提供了明确的工作方向，还在工具、代码等方面给予了极大的支持。
 
-
-
-
-
+我们的进步得益于陈渝老师和张福新老师的辛勤指导和付出。他们为我们提供了明确的工作方向，引导我们在正确的轨道上前进，在技术上为我们提供了极大的支持。此外，我们还非常感谢hev老师、陈林峰学长、徐淮师兄、刘庆涛师兄、贾越凯学长和李明老师，他们的帮助不仅仅体现在他们对团队的大力支持上，更在于他们的悉心指导与宝贵的经验分享，在我们遇到困难时雪中送炭，使得我们最终能够克服困难。在整个团队前进过程中，老师和学长们如同明灯，照亮我们前行的道路，我们真诚地向他们致以最深的谢意。
