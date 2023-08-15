@@ -131,7 +131,7 @@ ArceOS 是一个开源的、组件化的Unikernel。以组合组件库的方式�
 | [helloworld](https://github.com/aoooos/arceos/tree/main/apps/helloworld) |                                  |                                           | A minimal app that just prints a string                      |
 | [exception](https://github.com/aoooos/arceos/tree/main/apps/exception) |                                  | paging                                    | Exception handling test                                      |
 | [memtest](https://github.com/aoooos/arceos/tree/main/apps/memtest) | axalloc                          | alloc, paging                             | Dynamic memory allocation test                               |
-| [display]https://github.com/aoooos/arceos/tree/main/apps/display) | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                             |
+| [display](https://github.com/aoooos/arceos/tree/main/apps/display) | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                             |
 | [yield](https://github.com/aoooos/arceos/tree/main/apps/task/yield) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo      | Multi-threaded yielding test                                 |
 | [parallel](https://github.com/aoooos/arceos/tree/main/apps/task/parallel) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Parallel computing test (to test synchronization & mutex)    |
 | [sleep](https://github.com/aoooos/arceos/tree/main/apps/task/sleep) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Thread sleeping test                                         |
@@ -228,7 +228,6 @@ ArceOS 是一个实验性的，基于 unikernel 的组件化操作系统，具�
 
 ```c
 #include <stdio.h>
-
 int main()
 {
     printf("hello world!");
@@ -261,7 +260,7 @@ Hello, world！I am arceOS！
 
 我们都知道，输出都是通过硬件完成的，正如你现在正在看的这份文档，它能显示在屏幕上都得益于我们的操作系统为我们封装好了硬件操作并能够执行它。但是我们的目标不正是写一个操作系统吗，所以很遗憾我们只能自己添加上与硬件相关的层的封装了，axhal 应运而生。
 
-```
+```mermaid
 graph TD
 axhal
 ```
@@ -812,7 +811,7 @@ graph TD;
 
 这里给出了rust源码下载和编译的命令，其完整构建过程可参考https://github.com/aoooos/rust-toolchain-for-loongarch64。
 
-```rust
+```bash
 set -ex
 
 git clone https://github.com/aoooos/rust.git
@@ -833,14 +832,14 @@ qemu 是一个开源的虚拟化软件，它可以模拟多种硬件架构和设
 
 在下载安装qemu前，需要先安装相关的动态库。
 
-```
+```bash
 apt update
 apt install gcc cmake g++ build-essential pkg-config zlib1g-dev libglib2.0-dev meson libpixman-1-dev ninja-build libfdt-dev
 ```
 
 **源码构建**
 
-```
+```bash
 git clone https://github.com/foxsen/qemu.git
 cd qemu
 git checkout loongarch
