@@ -128,27 +128,27 @@ ArceOS 是一个开源的、组件化的Unikernel。以组合组件库的方式�
 
 | App                                                          | Extra modules                    | Enabled features                          | Description                                                  |
 | ------------------------------------------------------------ | -------------------------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| [helloworld](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/helloworld) |                                  |                                           | A minimal app that just prints a string                      |
-| [exception](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/exception) |                                  | paging                                    | Exception handling test                                      |
-| [memtest](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/memtest) | axalloc                          | alloc, paging                             | Dynamic memory allocation test                               |
-| [display](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/display) | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                             |
-| [yield](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/task/yield) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo      | Multi-threaded yielding test                                 |
-| [parallel](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/task/parallel) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Parallel computing test (to test synchronization & mutex)    |
-| [sleep](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/task/sleep) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Thread sleeping test                                         |
-| [priority](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/task/priority) | axalloc, axtask                  | alloc, paging, multitask, sched_cfs       | Thread priority test                                         |
-| [shell](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/fs/shell) | axalloc, axdriver, axfs          | alloc, paging, fs                         | A simple shell that responds to filesystem operations        |
-| [httpclient](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/net/httpclient) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple client that sends an HTTP request and then prints the response |
-| [echoserver](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/net/echoserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded TCP server that reverses messages sent by the client |
-| [httpserver](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/net/httpserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded HTTP server that serves a static web page   |
-| [udpserver](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/net/udpserver) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple echo server using UDP protocol                      |
+| [helloworld](https://github.com/aoooos/arceos/tree/main/apps/helloworld) |                                  |                                           | A minimal app that just prints a string                      |
+| [exception](https://github.com/aoooos/arceos/tree/main/apps/exception) |                                  | paging                                    | Exception handling test                                      |
+| [memtest](https://github.com/aoooos/arceos/tree/main/apps/memtest) | axalloc                          | alloc, paging                             | Dynamic memory allocation test                               |
+| [display]https://github.com/aoooos/arceos/tree/main/apps/display) | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                             |
+| [yield](https://github.com/aoooos/arceos/tree/main/apps/task/yield) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo      | Multi-threaded yielding test                                 |
+| [parallel](https://github.com/aoooos/arceos/tree/main/apps/task/parallel) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Parallel computing test (to test synchronization & mutex)    |
+| [sleep](https://github.com/aoooos/arceos/tree/main/apps/task/sleep) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Thread sleeping test                                         |
+| [priority](https://github.com/aoooos/arceos/tree/main/apps/task/priority) | axalloc, axtask                  | alloc, paging, multitask, sched_cfs       | Thread priority test                                         |
+| [shell](https://github.com/aoooos/arceos/tree/main/apps/fs/shell) | axalloc, axdriver, axfs          | alloc, paging, fs                         | A simple shell that responds to filesystem operations        |
+| [httpclient](https://github.com/aoooos/arceos/tree/main/apps/net/httpclient) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple client that sends an HTTP request and then prints the response |
+| [echoserver](https://github.com/aoooos/arceos/tree/main/apps/net/echoserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded TCP server that reverses messages sent by the client |
+| [httpserver](https://github.com/aoooos/arceos/tree/main/apps/net/httpserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded HTTP server that serves a static web page   |
+| [udpserver](https://github.com/aoooos/arceos/tree/main/apps/net/udpserver) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple echo server using UDP protocol                      |
 
 **Applications (C)**
 
 | App                                                          | Extra modules           | Enabled features           | Description                                         |
 | ------------------------------------------------------------ | ----------------------- | -------------------------- | --------------------------------------------------- |
-| [helloworld](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/c/helloworld) |                         |                            | A minimal C app that just prints a string           |
-| [memtest](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/c/memtest) | axalloc                 | alloc, paging              | Dynamic memory allocation test in C                 |
-| [sqlite3](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/apps/c/sqlite3) | axalloc, axdriver, axfs | alloc, paging, fp_simd, fs | Porting of [SQLite3](https://sqlite.org/index.html) |
+| [helloworld](https://github.com/aoooos/arceos/tree/main/apps/c/helloworld) |                         |                            | A minimal C app that just prints a string           |
+| [memtest](https://github.com/aoooos/arceos/tree/main/apps/c/memtest) | axalloc                 | alloc, paging              | Dynamic memory allocation test in C                 |
+| [sqlite3](https://github.com/aoooos/arceos/tree/main/apps/c/sqlite3) | axalloc, axdriver, axfs | alloc, paging, fp_simd, fs | Porting of [SQLite3](https://sqlite.org/index.html) |
 
 #### 1.1.4 与具体 OS 无关的 crates
 
@@ -195,17 +195,17 @@ Modules是AcreOS的组件集合。
 
 **Modules 列表**
 
-- [axalloc](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axalloc): ArceOS 的全局内存分配器.
-- [axconfig](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axconfig): ArceOS 特定平台编译的常量和参数配置。
-- [axdisplay](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axdisplay): ArceOS 的图形化模块。
-- [axdriver](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axdriver): ArceOS 的设备驱动模块。
-- [axfs](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axfs): ArceOS 的文件系统模块。
-- [axhal](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axhal): ArceOS硬件抽象层，为特定平台的操作提供统一的API。
-- [axlog](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axlog): ArceOS 多个级别日志记录宏，包括：error、warn、info、debug、trace。
-- [axnet](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axnet): ArceOS 的网络模块，包括：IpAddr、TcpSocket、UdpSocket、DnsSocket等。
-- [axruntime](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axruntime): ArceOS 的运行时库，是应用程序运行的基础环境。
-- [axsync](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axsync): ArceOS 提供的同步操作模块，包括：Mutex、spin。
-- [axtask](https://github.com/rcore-os/arceos-tutorial-book/blob/main/docs/modules/axtask): ArceOS 的任务调度管理模块，包括：任务创建、调度、休眠、销毁等。
+- [axalloc](https://github.com/aoooos/arceos/tree/main/modules/axalloc): ArceOS 的全局内存分配器.
+- [axconfig](https://github.com/aoooos/arceos/tree/main/modules/axconfig): ArceOS 特定平台编译的常量和参数配置。
+- [axdisplay](https://github.com/aoooos/arceos/tree/main/modules/axdisplay): ArceOS 的图形化模块。
+- [axdriver](https://github.com/aoooos/arceos/tree/main/modules/axdriver): ArceOS 的设备驱动模块。
+- [axfs](https://github.com/aoooos/arceos/tree/main/modules/axfs): ArceOS 的文件系统模块。
+- [axhal](https://github.com/aoooos/arceos/tree/main/modules/axhal): ArceOS硬件抽象层，为特定平台的操作提供统一的API。
+- [axlog](https://github.com/aoooos/arceos/tree/main/modules/axlog): ArceOS 多个级别日志记录宏，包括：error、warn、info、debug、trace。
+- [axnet](https://github.com/aoooos/arceos/tree/main/modules/axnet): ArceOS 的网络模块，包括：IpAddr、TcpSocket、UdpSocket、DnsSocket等。
+- [axruntime](https://github.com/aoooos/arceos/tree/main/modules/axruntime): ArceOS 的运行时库，是应用程序运行的基础环境。
+- [axsync](https://github.com/aoooos/arceos/tree/main/modules/axsync): ArceOS 提供的同步操作模块，包括：Mutex、spin。
+- [axtask](https://github.com/aoooos/arceos/tree/main/modules/axtask): ArceOS 的任务调度管理模块，包括：任务创建、调度、休眠、销毁等。
 
 #### 1.1.6 设计实现 helloworld unikernel
 
