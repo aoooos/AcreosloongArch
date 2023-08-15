@@ -209,9 +209,7 @@ Modules是AcreOS的组件集合。
 
 #### 1.1.6 设计实现 helloworld unikernel
 
-通常，我们在学习一门新的编程语言时，接触的第一个示例程序就是 helloworld，当一名新的程序员清除完一切障碍顺利抵达 helloworld 时，他的内心体验到的不仅仅是一种成功的喜悦，更重要的是，他正在亲身经历一个跨越历史的时刻。各位，你还记得你第一次写的 helloworld 吗？
-
-这一章，我们将沿袭前人之路，以 helloworld 来开启沟通 ArceOS 世界的历程。我们将通过从零开始设计实现一个 helloworld unikernel，来直接感受 ArceOS 的理念、特性。
+本章节将通过从零开始设计实现一个 helloworld unikernel。
 
 **回顾 ArceOS**
 
@@ -224,7 +222,7 @@ ArceOS 是一个实验性的，基于 unikernel 的组件化操作系统，具�
 
 **helloworld unikernel 功能需求分析**
 
-首先，我们一起来看一下即将实现的 helloworld unikernel 到底是什么？与我们往常学习编程语言的 helloworld 示例程序有什么区别？
+首先，我们要理解将实现的 helloworld unikernel 到底是什么，与我们往常学习编程语言的 helloworld 示例程序之间的区别。
 
 ```c
 #include <stdio.h>
@@ -237,7 +235,7 @@ int main()
 
 **以这个 C 语言编写的 helloworld 程序为例，可以发现**，无论是这个 helloworld 示例程序，还是现在的 helloworld unikernel，核心功能都是向屏幕打印 ”hello world“ 字符串。
 
-不同的是，在绝大多数情况下（不考虑嵌入式系统），如果我们尝试把c语言程序编译好的二进制程序直接放在一个裸机环境上是不能够运行的，因为缺少它依赖的各种服务和资源，缺乏和硬件交互的能力。也就是说，如果要在一台裸机上部署这个应用，至少需要安装一个操作系统，然后才能令这个 helloworld 成功运行。
+不同的是，在绝大多数情况下（不考虑嵌入式系统），如果尝试把c语言程序编译好的二进制程序直接放在一个裸机环境上是不能够运行的，因为缺少它依赖的各种服务和资源，缺乏和硬件交互的能力。也就是说，如果要在一台裸机上部署这个应用，至少需要安装一个操作系统，然后才能令这个 helloworld 成功运行。
 
 而对于 helloworld unikernel 来讲，它是一个 helloworld 应用+最小支撑运行环境的集合，在一台裸机上进行烧录，就可以执行 helloworld 程序。
 
@@ -250,15 +248,15 @@ int main()
 Hello, world！I am arceOS！
 ```
 
-**接下来，我们将结合 ArceOS 的特性，从简单到复杂，将 helloworld unikernel 功能逐步分解，从单个组件到三个组件，然后引入分层和 feature 的概念，最终向用户呈现一个简洁、规范的实现过程。**
+**接下来的内容将结合 ArceOS 的特性，从简单到复杂，将 helloworld unikernel 功能逐步分解，从单个组件到三个组件，然后引入分层和 feature 的概念，最终向用户呈现一个简洁、规范的实现过程。**
 
 **1.  依靠 axhal 组件实现从系统引导到输出**
 
-在这一节，我们尝试单纯借助 axhal 组件实现 helloworld unikernel 从系统引导到输出字符的功能，为此需要对默认的 axhal 代码做一点修改。
+在这一节内容中，尝试单纯借助 axhal 组件实现 helloworld unikernel 从系统引导到输出字符的功能，为此需要对默认的 axhal 代码做一点修改。
 
 **初探 axhal 组件**
 
-我们都知道，输出都是通过硬件完成的，正如你现在正在看的这份文档，它能显示在屏幕上都得益于我们的操作系统为我们封装好了硬件操作并能够执行它。但是我们的目标不正是写一个操作系统吗，所以很遗憾我们只能自己添加上与硬件相关的层的封装了，axhal 应运而生。
+我们都知道，输出都是通过硬件完成的，正如你现在正在看的这份文档，它能显示在屏幕上都得益于我们的操作系统为我们封装好了硬件操作并能够执行它。而helloworld unikernel没有这层操作系统的支持，所以我们只能自己添加上与硬件相关的层的封装了，axhal 应运而生。
 
 ```mermaid
 graph TD
@@ -267,13 +265,13 @@ axhal
 
 在 ArceOS 中，axhal 组件提供了一层针对不同硬件平台的硬件封装，它为指定的操作平台进行引导和初始化过程，并提供对硬件的操作。例如 modules/axhal/src/platform/qemu_virt_riscv/console.rs 里面提供了对字符输出的封装，我们可以直接调用其中的 putchar 函数进行字符的输出，而不是一次又一次地使用 sbi 这样汇编级别的代码进行输出。
 
-其实在 ArceOS 里面，putchar函数经过了许多层的封装已经变成类似于 print 这样方便用户使用的函数了，helloworld unikernel 里面的输出调用链可以查看本章第三部分， 但其实 helloworld 输出的本质还是调用 axhal 组件的putchar函数，接下来让我们抛掉方便用户调用的封装，通过对 axhal 代码的一些修改，来直观地感受一下系统启动和调用 axhal 所提供的 putchar 函数进行输出的流程。
+其实在 ArceOS 里面，putchar函数经过了许多层的封装已经变成类似于 print 这样方便用户使用的函数了，但其实 helloworld 输出的本质还是调用 axhal 组件的putchar函数，接下来的内容将介绍如何抛掉方便用户调用的封装，通过对 axhal 代码的一些修改，来直观地感受一下系统启动和调用 axhal 所提供的 putchar 函数进行输出的流程。
 
 **动手尝试**
 
 以 qemu_virt_riscv 平台为例， 我们首先关注 modules/axhal/src/platform/qemu_virt_riscv/boot.rs 这个文件， 其中的 _start() 函数被链接到 ".text.boot" 段， 作为 ArceOS 运行的第一段代码。具体的不同段的分配可以查看 modules/axhal/linker.lds.S 文件。
 
-接下来我们尝试在里面直接调用 ArceOS 为我们封装好的 sbi 函数进行输出，首先添加 console_putchar 函数方便输出我们想要输出的结果。
+接下来尝试在里面直接调用 ArceOS 为我们封装好的 sbi 函数进行输出，首先添加 console_putchar 函数方便输出我们想要输出的结果。
 
 ```rust
 unsafe fn console_putchar() {
@@ -287,7 +285,7 @@ unsafe fn console_putchar() {
 }
 ```
 
-然后我们需要在代码中加入对 console_putchar 函数的调用， 我们需要在初始化页表之后， 初始化 mmu 之前执行 console_putchar 函数。 并且添加
+然后需要在代码中加入对 console_putchar 函数的调用， 我们需要在初始化页表之后， 初始化 mmu 之前执行 console_putchar 函数。 并且添加
 
 ```rust
 console_putchar = sym console_putchar,
@@ -303,21 +301,19 @@ call {console_putchar}
 call {init_mmu}
 ```
 
-// TODO! 完整的代码 (boot.rs) 见实验部分
-
-此时我们只需执行:
+此时只需执行:
 
 ```shell
 make ARCH=riscv64 A=apps/helloworld run
 ```
 
-如无意外， 我们在打印 ArceOS 的 LOGO 之前看到了我们调用 putchar 函数进行的输出 "HELLO FROM SBI"， 当然，每个字符的输出只需要在 console_putchar 中自行添加即可。
+如无意外， 在打印 ArceOS 的 LOGO 之前看到了调用 putchar 函数进行的输出 "HELLO FROM SBI"， 当然，每个字符的输出只需要在 console_putchar 中自行添加即可。
 
-至此，我们已经完成了从系统引导到输出的最小流程， 而且从开机到输出这个过程不依赖于 axhal 外的任一组件，并且是可以在真实的硬件环境中(例如 CV1811H 的 riscv 开发板)进行输出的， 这也体现了 ArceOS 的设计思路， 我们只需要复用这一个模块，就能很方便地对硬件进行操作了。
+至此，已经完成了从系统引导到输出的最小流程， 而且从开机到输出这个过程不依赖于 axhal 外的任一组件，并且是可以在真实的硬件环境中(例如 CV1811H 的 riscv 开发板)进行输出的， 这也体现了 ArceOS 的设计思路， 只需要复用这一个模块，就能很方便地对硬件进行操作了。
 
 **2. helloworld 程序基于 axhal 组件实现输出**
 
-按照上一部分，既然 axhal 组件已经为我们准备好了 putchar 输出函数，其实我们已经可以编写 helloworld 程序进行输出了，如果关注了第三部分中 helloworld 运行的完整流程图就可以发现 helloworld 的运行还依赖于 libax，libax 就是提供一层类似于库函数的封装，它实现输出的本质还是用到我们提到的 axhal 中的输出，我们在此部分更多考虑地是 helloworld 与 axhal 组件进行搭配并且输出的过程，libax 可以看成是 helloworld 程序的一部分。
+按照上一部分， axhal 组件已经准备好了 putchar 输出函数，接下来可以编写 helloworld 程序进行输出了，如果关注了后续内容中 helloworld 运行的完整流程图就可以发现 helloworld 的运行还依赖于 libax，libax 就是提供一层类似于库函数的封装，它实现输出的本质还是用到 axhal 中的输出，在此部分更多考虑地是 helloworld 与 axhal 组件进行搭配并且输出的过程，libax 可以看成是 helloworld 程序的一部分。
 
 **动手尝试**
 
@@ -326,9 +322,9 @@ graph TD
 helloworld --> axhal
 ```
 
-我们看到 boot.rs 的汇编代码最后有一段跳转到 entry 的代码， 目前来说，ArceOS 运行到这里之后，就会跳转到 rust_entry 函数（在axhal/src/platform/qemu_virt_riscv/mod.rs 文件中），这个函数会执行一些初始化流程，然后调用rust_main 函数（在 modules/axruntime/src/lib.rs 文件中）， rust_main 函数会根据选择的 feature 进行初始化的流程， 最后会调用应用程序的 main 函数。
+在boot.rs 中的汇编代码最后有一段跳转到 entry 的代码， 目前来说，ArceOS 运行到这里之后，就会跳转到 rust_entry 函数（在axhal/src/platform/qemu_virt_riscv/mod.rs 文件中），这个函数会执行一些初始化流程，然后调用rust_main 函数（在 modules/axruntime/src/lib.rs 文件中）， rust_main 函数会根据选择的 feature 进行初始化的流程， 最后会调用应用程序的 main 函数。
 
-为避免引入过多组件， 我们直接将 axhal/src/platform/qemu_virt_riscv/mod.rs 里面 rust_entry 中调用的 rust_main() 函数换成应用程序的 main 函数(记得要在上面 extern 引用 main 函数)， 并加上一行 self::misc::terminate()， 方便 arceos 运行完程序后终止，以防止ArceOS卡死不能正常退出（目前退出的功能依赖于下一部分提到的axruntime组件）。
+为避免引入过多组件， 可以直接将 axhal/src/platform/qemu_virt_riscv/mod.rs 里面 rust_entry 中调用的 rust_main() 函数换成应用程序的 main 函数(记得要在上面 extern 引用 main 函数)， 并加上一行 self::misc::terminate()， 方便 arceos 运行完程序后终止，以防止ArceOS卡死不能正常退出（目前退出的功能依赖于下一部分提到的axruntime组件）。
 
 axhal/src/platform/qemu_virt_riscv/mod.rs
 
@@ -357,9 +353,9 @@ unsafe extern "C" fn rust_entry(cpu_id: usize, dtb: usize) {
 make ARCH=riscv64 A=apps/helloworld run
 ```
 
-如无意外， helloworld成功输出！说明我们的思路是正确的，将要输出的内容通过 helloworld 传递给 axhal，这样只需要两个组件就能实现应用程序 helloworld 的运行和输出。
+如无意外， helloworld成功输出！
 
-其实 helloworld 程序本质还是调用 axhal 的 sbi 输出功能（具体步骤见第三部分流程图），我们把两个组件结合了起来！这也体现了 ArceOS 的思想，只需要把需要的部分组合起来就能实现我们想要的功能。
+其实 helloworld 程序本质还是调用 axhal 的 sbi 输出功能，这里把两个组件结合了起来！这也体现了 ArceOS 的思想，只需要把需要的部分组合起来就能实现我们想要的功能。
 
 **3. 添加 axruntime 组件提供更完整的运行环境**
 
@@ -372,7 +368,7 @@ graph TD
 helloworld --> axruntime --> axhal
 ```
 
-在这一节中我们直接使用 ArceOS 的源代码，将之前修改的代码还原，在 axhal 执行完后不是直接跳转到应用程序的 main 函数， 而是跳转到 axruntime 这个组件的 rust_main 函数，再跳转到 helloworld 的 main 函数。
+在接下来的内容中直接使用 ArceOS 的源代码，将之前修改的代码还原，在 axhal 执行完后不是直接跳转到应用程序的 main 函数， 而是跳转到 axruntime 这个组件的 rust_main 函数，再跳转到 helloworld 的 main 函数。
 
 **动手尝试**
 
@@ -382,11 +378,11 @@ helloworld --> axruntime --> axhal
 make ARCH= riscv64 A=apps/helloworld run LOG=debug
 ```
 
-运行结果如下图，下面的调试输出信息绿色字体部分可以为我们直观地展示 axruntime 做的一些初始化的工作。
+运行结果如下图，下面的调试输出信息绿色字体部分可以为直观地展示 axruntime 做的一些初始化的工作。
 
 ![image-20230707100119498](5j7mDSt3oNqMHyd.png)
 
-有了这三个组件，我们不仅能运行 helloworld 这样的简单程序，还能运行稍微复杂一些的程序。
+有了这三个组件的支持，不仅能运行 helloworld 这样的简单程序，还能运行稍微复杂一些的程序。
 
 例如，运行 yield 应用程序 (FIFO scheduler):
 
@@ -400,7 +396,7 @@ make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
 
 **运行过程分析**
 
-让我们通过流程图看看 ArceOS 的运行背后到底发生了什么。
+可以通过下面的流程图看看 ArceOS 的运行逻辑。
 
 第一步是一些初始化函数的调用过程。
 
@@ -493,35 +489,35 @@ graph TD;
     G --> H["sbi_rt::legacy::console_putchar"];
 ```
 
-至此，我们已经完成了从 axhal 到 axruntime 到 helloworld 的组合了，并且将 helloworld unikernel 运行了起来。
+至此，程序完成了从 axhal 到 axruntime 到 helloworld 的组合了，并且将 helloworld unikernel 运行了起来。
 
 #### 1.1.7 由开启动态内存分配特性来初识系统相关和无关
 
 **前三个阶段总结**
 
-在之前的部分中，我们以向屏幕打印“hello world”为目标，由简入繁，共经历了三个阶段，让我们做一个简单的总结：
+在之前的部分中，以向屏幕打印“hello world”为目标，由简入繁，共经历了三个阶段，在此做一个简单的总结：
 
-第一阶段，“未有天地之时，混沌状如鸡子”，构建一个可以与硬件交互的最小运行环境 axhal，也可以理解为，我们在完成引导和必要功能初始化之后就可以直接调用对应平台的汇编指令来实现打印 helloworld 的功能，此时用户所需功能（向屏幕打印“hello world”）和运行时环境是混合在一起的。
+第一阶段，“未有天地之时，混沌状如鸡子”，构建一个可以与硬件交互的最小运行环境 axhal，也可以理解为，在完成引导和必要功能初始化之后就可以直接调用对应平台的汇编指令来实现打印 helloworld 的功能，此时用户所需功能（向屏幕打印“hello world”）和运行时环境是混合在一起的。
 
-第二阶段，“清轻者上升为天，重浊者下降为地”，上一阶段的程序分裂成 axhal+helloworld， 尝试将打印 helloworld 功能进行分离并扩展，令 helloworld 扩展成一个独立的 app。该阶段需要定义程序入口，我们尝试在 axhal 中设置入口点，令 axhal 经过引导之后直接跳转到 helloworld 中执行相应功能。
+第二阶段，“清轻者上升为天，重浊者下降为地”，上一阶段的程序分裂成 axhal+helloworld， 尝试将打印 helloworld 功能进行分离并扩展，令 helloworld 扩展成一个独立的 app。该阶段需要定义程序入口，在 axhal 中设置入口点，令 axhal 经过引导之后直接跳转到 helloworld 中执行相应功能。
 
-第三阶段，“天生日月星辰，地生山川草木”，第二阶段的两个模块进一步分裂并扩展为 axhal+axruntime+helloworld，我们不满足于用户直接基于 axhal 提供的低级的裸环境来进行开发，所以将 axhal 包装并扩展成 axruntime 来提供各种运行时必要组件，和 axhal 相比，axruntime 掩盖了与底层硬件交互的复杂原理，此时 helloworld 的运行环境由直接依赖于 axhal 变成了更为高级更为强大的 axruntime。
+第三阶段，“天生日月星辰，地生山川草木”，第二阶段的两个模块进一步分裂并扩展为 axhal+axruntime+helloworld，将 axhal 包装并扩展成 axruntime 来提供各种运行时必要组件，和 axhal 相比，axruntime 掩盖了与底层硬件交互的复杂原理，此时 helloworld 的运行环境由直接依赖于 axhal 变成了更为高级更为强大的 axruntime。
 
 **系统无关和系统相关**
 
-可以说在之前的部分中，就已经很好的体现出 ArceOS 形如细胞一样的强大分裂和扩展的功能。前三个阶段打印到屏幕的文字的实际存储位置位于 .text 段，由底层运行环境进行静态分配并管理的，这种管理方式的优势是开销小，性能高，缺点是灵活性不足。
+ ArceOS 具有细胞一样的强大分裂和扩展的功能。前三个阶段打印到屏幕的文字的实际存储位置位于 .text 段，由底层运行环境进行静态分配并管理的，这种管理方式的优势是开销小，性能高，缺点是灵活性不足。
 
-如果我们想尝试使用动态分配的类型怎么办？具体来说，我们想创建一个 String 类型的字符串，然后通过 println 的格式化功能将组装后的字符串打印到屏幕。这个功能应该如何实现呢？
+对于动态分配的类型，比如创建一个 String 类型的字符串，然后通过 println 的格式化功能将组装后的字符串打印到屏幕。这个功能应该如何实现呢？
 
-进一步分析上述的需求，发现我们的目的其实是操作系统 ArceOS 为用户的应用程序 helloworld 提供内存分配支持，那么如何优雅地为用户提供这种支持成了我们目前首要的目标。
+进一步分析上述的需求，其目的其实是操作系统 ArceOS 为用户的应用程序 helloworld 提供内存分配支持，那么如何优雅地为用户提供这种支持成了我们目前首要的目标。
 
-回想一下上一个章对 Unikernel 这个概念的讲解，操作系统种类繁多，但是通过将各个功能进行深入拆分和罗列，发现支撑操作系统的功能模块其实有共性可言，比如一个操作系统想要实现多个任务切换，那这个操作系统一定要涉及到任务（进程）的调度算法，而这种可以分离成单独的模块甚至可以被其他操作系统所复用的特点，在 ArceOS 的设计体系中我们称之为系统无关；而相反，前面涉及到的 axhal 和 axruntime，是 ArceOS 本身利用系统无关的组件为用户程序打造运行时环境的特定实现方式，这种组合扩展方式是不同于其他操作系统的。所以这类模块我们称其为系统相关，代表了操作系统通过系统无关组件来打造用户程序运行环境的独特方式，无法被其他系统所复用。
+结合前文对 Unikernel 这个概念的介绍，我们知道，操作系统种类繁多，但是通过将各个功能进行深入拆分和罗列，发现支撑操作系统的功能模块其实有共性可言，比如一个操作系统想要实现多个任务切换，那这个操作系统一定要涉及到任务（进程）的调度算法，而这种可以分离成单独的模块甚至可以被其他操作系统所复用的特点，在 ArceOS 的设计体系中我们称之为系统无关；而相反，前面涉及到的 axhal 和 axruntime，是 ArceOS 本身利用系统无关的组件为用户程序打造运行时环境的特定实现方式，这种组合扩展方式是不同于其他操作系统的。所以这类模块我们称其为系统相关，代表了操作系统通过系统无关组件来打造用户程序运行环境的独特方式，无法被其他系统所复用。
 
 具体到 ArceOS 的源码组成部分来看，目前 crates 文件夹下的模块属于是系统无关的模块，这些库可以理解为构建一个操作系统所需要的底层共性，我们以松耦合，高抽象的方式开发这些库，目的是后续可以为别的系统复用。modules 下的模块是 ArceOS 为了想要实现操作系统的必要功能而对 crates 的各种库组合和扩展后，更加接近用户应用层的抽象模块。
 
 **动手尝试**
 
-讲解完这两个基本概念，回到动态分配内存这个主题上，根据之前分类的标准，很容易发现动态分配特性是属于系统无关的，基于之前的调用依赖图，我们可以将其更新为如下图所示：
+讲解完这两个基本概念，回到动态分配内存这个主题上，根据之前分类的标准，很容易发现动态分配特性是属于系统无关的，其调用依赖图如下图所示：
 
 ```mermaid
 graph TD
@@ -536,16 +532,16 @@ graph TD
     end
 ```
 
-这里我们简化了一下，没有涉及到其他辅助类的模块的展示，只展示了必要的功能依赖链。
+这里进行了必要的简化，没有涉及到其他辅助类的模块的展示，只展示了必要的功能依赖链。
 
-具体体现在代码中，首先，我们修改 apps/helloworld/Cargo.toml，添加开启动态内存分配的特性：
+具体体现在代码中，首先，修改 apps/helloworld/Cargo.toml，添加开启动态内存分配的特性：
 
 ```toml
 [dependencies]
 libax = { path = "../../ulib/libax", features=["alloc"]} #尝试添加动态分配内存的feature
 ```
 
-之后，我们修改 apps/helloworld/src/main.rs，尝试使用 alloc 特性提供的动态分配内存功能：
+之后，修改 apps/helloworld/src/main.rs，尝试使用 alloc 特性提供的动态分配内存功能：
 
 ```rust
 #![no_std]
@@ -567,15 +563,15 @@ fn main() {
 
 ![](12879bc9837566bb.png)
 
-打印出”Hello world! I am ArceOS"，说明我们成功为 helloworld 提供了动态内存分配功能。
+打印出”Hello world! I am ArceOS"，说明成功为 helloworld 提供了动态内存分配功能。
 
-其实像这种 ArceOS 在用户看不见的地方根据用户选择的特性需求，组装并扩展各种模块提供定制的运行环境，其实就是 ArceOS 的组件化运作的核心机制。我们从最简单的 helloworld 使用动态内存分配特性出发，“窥一斑而知全豹”，来触及 ArceOS 的核心运作机制。在后续的章节中我们会为读者展示 ArceOS 更为强大的功能特性，其功能运作的基本原理和 helloworld 是大体相似的，相信读者理解了这部分的内容，后续章节理解起来会更为顺畅一些。
+ArceOS 在用户看不见的地方根据用户选择的特性需求，组装并扩展各种模块提供定制的运行环境，其实就是 ArceOS 的组件化运作的核心机制。本节内容从最简单的 helloworld 使用动态内存分配特性出发，“窥一斑而知全豹”，来触及 ArceOS 的核心运作机制。在后续的章节中将继续介绍 ArceOS 更为强大的功能特性。
 
 #### 1.1.8 修改命令实现对features的细粒度控制
 
 **动手尝试**
 
-这部分讲的是用户可以通过修改运行命令的内容，来进一步细粒度的控制特性，这个部分比较简单，读者可以很轻松地完成。
+这部分介绍的是用户可以通过修改运行命令的内容，来进一步细粒度的控制特性。
 
 以向屏幕打印日志信息为例，如果想要修改日志的过滤等级，例如，展示出 warn 级以上的日志（info 日志不会打印到屏幕上），可以修改原来的运行命令，这里还是以 qemu risv64 平台为例，原始命令为：
 
@@ -587,7 +583,7 @@ make A=apps/helloworld ARCH=riscv64 LOG=info run
 
 ![img](70bcb2d5d8955ed2.png)
 
-如果修改 log 日志等级：
+修改 log 日志等级：
 
 ```bash
 make A=apps/helloworld ARCH=riscv64 LOG=warn run
@@ -597,7 +593,7 @@ make A=apps/helloworld ARCH=riscv64 LOG=warn run
 
 ![img](ff2b0cf439009c81.png)
 
-我们可以看到之前展示出来绿色字体的 info 日志行都消失了。
+可以看到之前展示出来绿色字体的 info 日志行都消失了。
 
 **实现原理**
 
@@ -624,11 +620,11 @@ graph TD
 
 #### 1.1.9 设计实现协作式多任务unikernel
 
-在操作系统设计中，如何确保同时处理多个请求？我们可以使用线程或进程进行多任务处理实现，但还有一个选择——协作性多任务处理。
+在操作系统设计中，可以使用线程或进程进行多任务处理实现同时处理多个请求，此外还有一个选择——协作性多任务处理。
 
-这个选项是最困难的。在这里我们说操作系统当然很酷，它有调度程序和计划程序，它可以处理进程，线程，组织它们之间的切换，处理锁等，但它仍然不知道应用程序是如何工作的，而这些工作原理应该是我们作为开发人员所知道的。
+这个选项是最困难的。操作系统有调度程序和计划程序，它可以处理进程，线程，组织它们之间的切换，处理锁等，但它仍然不知道应用程序是如何工作的，而这些工作原理应该是开发人员所知道的。
 
-我们知道在CPU上会有短暂的时刻执行某些计算操作，但大多数时候我们都期望网络I/O能更清楚何时在处理多个请求之间切换。
+在CPU上会有短暂的时刻执行某些计算操作，但大多数时候我们都期望网络I/O能更清楚何时在处理多个请求之间切换。
 
 从操作系统的角度来看，协作式多任务只是一个执行线程，在其中，应用程序在处理多个请求/命令之间切换。通常情况是：只要一些数据到达，就会读取它们，解析请求，将数据发送到数据库，这是一个阻塞操作；而非堵塞操作时在等待来自数据库的响应时，可以开始处理另一个请求，它被称为“合作或协作”，因为所有任务/命令必须通过合作以使整个调度方案起作用。它们彼此交错，但是有一个控制线程，称为协作调度程序，其角色只是启动进程并让这些线程自动将控制权返回给它。
 
@@ -636,11 +632,11 @@ graph TD
 
 编写这样的程序的困难在于，这种切换，维护上下文的过程，将每个任务组织为一系列间歇性执行的较小步骤，落在开发人员身上。另一方面，我们获得了效率，因为没有不必要的切换，例如，在线程和进程之间切换时切换处理器上下文没有问题。
 
-在实现了Hello World编写和运行之后，我们终于可以首窥操作系统内核设计中的第一个重要部分：协作式多任务的实现。
+在实现了Hello World编写和运行之后，接下来将简单介绍操作系统内核设计中的第一个重要部分：协作式多任务的实现。
 
 **协作式多任务的主体实现**
 
-协作式多任务是一种任务调度方式，它与抢占式多任务(preemptive)相对应，关于后者，我们将在下一章详细说明。在本章学习中，我们先要了解“non-preeptive"——或者说是协作的调度方式。比起抢占，它显得更加友善而不具有侵略性。要设计一个协作式多任务的unikernel，需要满足这些要求：
+协作式多任务是一种任务调度方式，它与抢占式多任务(preemptive)相对应。在本章中，将首先介绍“non-preeptive"——或者说是协作的调度方式。比起抢占，它显得更加友善而不具有侵略性。要设计一个协作式多任务的unikernel，需要满足这些要求：
 
 1. 任务切换机制：实现任务的切换和调度，确保多个任务在适当的时候轮流执行。任务切换应该是协作式的，即任务自愿放弃执行权，而不是由系统强制进行切换。这部分的需求确定了unikernel需要依赖于`axtask`这一module以及`multitask`、`sched_fifo`、`sched_cfs`等任务管理相关的crates。
 2. 上下文保存与恢复：在任务切换时，需要保存当前任务的上下文（包括寄存器、程序计数器、堆栈等状态），以便后续能够正确地恢复该任务的执行状态。这也包括了允许任务在运行过程中主动挂起自己，将执行权让给其他任务。同时，需要提供相应的机制来恢复挂起的任务继续执行。
@@ -648,11 +644,11 @@ graph TD
 4. 任务同步与通信：提供机制来实现任务之间的同步和通信，以防止竞态条件和数据访问冲突。在ArceOS中，我们可以参考app `parallel`了解具体的实现。
 5. 定时器和延时：提供定时器功能，允许任务在一定时间后唤醒或执行延时操作。在ArceOS中，我们可以参考app `sleep`了解具体的实现。
 
-可以感受到，比起Hello World，实现协作式多任务涉及到的modules和crates、调用了它们实现的app都大为增加。
+比起Hello World，实现协作式多任务涉及到的modules和crates、调用了它们实现的app都大为增加。
 
 **调试和运行需求**
 
-在Hello World的实现过程中，我们已经初步了解了ArceOS从代码再到硬件的落地，最后在嵌入式设备实机运行的过程。在本章，读者可以利用上一章的经验，在硬件设备对生成的二进制镜像进行调试。为此，在最终烧录时ArceOS也将实现开发者的调试和改造需求：
+在Hello World的实现过程中，已经初步介绍了ArceOS从代码再到硬件的落地，最后在嵌入式设备实机运行的过程。在本章，将利用上一章的经验，在硬件设备对生成的二进制镜像进行调试。为此，在最终烧录时ArceOS也将实现开发者的调试和改造需求：
 
 1. 异常处理：处理任务执行过程中可能出现的异常情况，例如任务错误、内存越界等情况。这些比较难处理的错误需要日志的打印来实现，具体操作我们沿用了HelloWorld中的处理，同时引入了app `exception`细化异常打印日志。
 2. 系统可扩展性：设计具有良好可扩展性的任务管理机制，允许动态地创建和销毁任务，以适应不同应用场景和任务数量的需求。在实现这个unikernel的app中（`parallel`、`priority`、`sleep`、`yield`），我们都进行了编译内核数、架构、日志输出粒度等的自由设置。
@@ -682,9 +678,9 @@ Rust 中，模块和单独的文件不存在必然关联。 在编写 Rust 程�
 
 想要确定一个任务什么时候需要终止运行或是与其它任务共享有限的资源，我们必须首先明确各个任务之间的优先级区别，而优先级一般是由各个任务的到达时间、运行时间等参数确定的。上面这段话涉及到两个关键点——任务本身和ArceOS选择的策略，分别对应到两个module：`axtask`以及`axalloc`；前者负责任务本身（如运行时长等）调配，后者负责操作系统的内存分配策略（cfs、fifo、rr等）的分配。
 
-对于这些分配的算法目前都已经有了成型的实现方法，换句话说它们其实是与操作系统无关的。对于ArceOS，我们可以借助这个特点将它们封装成与系统无关的modules。
+对于这些分配的算法目前都已经有了成型的实现方法，换句话说它们其实是与操作系统无关的。对于ArceOS，可以借助这个特点将它们封装成与系统无关的modules。
 
-对于不同的任务，我们在priority中的`main.rs`进行了手动规定，读者也可以通过修改其中参数运行来观察优先级在不同策略下的分配：
+对于不同的任务，在priority中的`main.rs`进行了手动规定：
 
 ```rust
 const TASK_PARAMS: &[TaskParam] = &[
@@ -720,7 +716,7 @@ const TASK_PARAMS: &[TaskParam] = &[
 
 
 
-在上面的代码里我们规定了四个短任务和一个长任务，长度在参数`value`中确定任务的长度。有兴趣的同学可以在ArceOS的根文件目录下尝试运行以下命令体验不同的分配策略效果。
+在上面的代码里规定了四个短任务和一个长任务，长度在参数`value`中确定任务的长度。可以在ArceOS的根文件目录下尝试运行以下命令体验不同的分配策略效果。
 
 ```rust
 test_one "SMP=1 LOG=info" "expect_info_smp1_fifo.out"
@@ -729,13 +725,11 @@ test_one "SMP=1 LOG=info APP_FEATURES=sched_rr" "expect_info_smp1_rr.out"
 test_one "SMP=4 LOG=info APP_FEATURES=sched_cfs" "expect_info_smp4_cfs.out"
 ```
 
-
-
-通过上面的任务，相信读者对`axtask`以及`axalloc`的功能已经有了初步的认识,接下来我们可以通过arceos提供的`yield`app来阐明与实现协作式多任务相关的crates。
+通过上面的任务对`axtask`以及`axalloc`的功能进行初步的介绍，接下来将通过arceos提供的`yield`app来阐明与实现协作式多任务相关的crates。
 
 **yield：产生多线程的测试**
 
-在上面的app中，我们实现了任务的调度，下一个目标即是实现任务间的切换。在任务切换中，线程间的切换相较于线程容易不少，所以我们先从`yield`这一app开始，初步了解实现协作式多任务最终目标前modules和crates是如何衔接的。
+在上面的app中，实现了任务的调度，下一个目标即是实现任务间的切换。在任务切换中，线程间的切换相较于线程容易不少，所以先从`yield`这一app开始，初步了解实现协作式多任务最终目标前modules和crates是如何衔接的。
 
 现代的任务调度算法基本都是抢占式的，它要求每个应用只能连续执行一段时间，然后内核就会将它强制性切换出去。 一般将 时间片 (Time Slice) 作为应用连续执行时长的度量单位，每个时间片可能在毫秒量级。 一般使用时间片轮转算法 (RR, Round-Robin) 来对应用进行调度。为了实现协作的目标，在运行和测试这个app过程中需要选择传统的cfs或fifo进行测试。
 
@@ -771,7 +765,7 @@ fn main() {
 1. 操作系统初始化，加载yield app。
 2. 使用`task::spawn`循环来生成`NUM_TASKS`任务（类似于线程）。 每个任务执行一个函数，只需打印其ID即可。 如果禁用抢占，也就是应用协作式方法，任务会自动执行`yield`以放弃CPU。如果不使能SMP，使用单核编译，任务的执行顺序必须是`FIFO`。 `main task`将等待所有其他任务完成。如果没有，则继续执行`yield`并等待。
 
-也就是说我们如果不规定APP_FEATURE内参数为抢占，那么将默认采取协作式进行实现。读者可以通过运行以下命令进行测试：
+也就是说如果不规定APP_FEATURE内参数为抢占，那么将默认采取协作式进行实现。可以通过运行以下命令进行测试：
 
 ```bash
 make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
@@ -779,7 +773,7 @@ make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
 
 
 
-启动yield的同时，我们实现了更加细节部分的调用，流程图如下：
+启动yield的同时，实现了更加细节部分的调用，流程图如下：
 
 ```mermaid
 graph TD;
@@ -797,7 +791,7 @@ graph TD;
 
 
 
-可以看到，我们在实现协作式多任务相关的unikernel时，需要在统一的接口实现内存分配的算法，包括了`alloc`和`paging`。实现具体分配算法时，则需要调用多任务相关的`multitask`和`schedule`两个crates。
+可以看到，在实现协作式多任务相关的unikernel时，需要在统一的接口实现内存分配的算法，包括了`alloc`和`paging`。实现具体分配算法时，则需要调用多任务相关的`multitask`和`schedule`两个crates。
 
 ### 1.2 arceos移植到loongarch架构所需环境
 
@@ -1262,6 +1256,8 @@ SYM_CODE_END(kernel_entry)
 ```
 
 ### 2.4 字符打印
+
+关于helloworld的打印过程中函数封装调用的过程在1.1.6小节中有较为详细的介绍，这里不再赘述，只给出其部分实现代码。
 
 **helloworld**
 
