@@ -684,12 +684,6 @@ const TASK_PARAMS: &[TaskParam] = &[
 
 在上面的代码里规定了四个短任务和一个长任务，长度在参数`value`中确定任务的长度。可以在ArceOS的根文件目录下尝试运行以下命令体验不同的分配策略效果。
 
-```rust
-test_one "SMP=1 LOG=info" "expect_info_smp1_fifo.out"
-test_one "SMP=1 LOG=info APP_FEATURES=sched_cfs" "expect_info_smp1_cfs.out"
-test_one "SMP=1 LOG=info APP_FEATURES=sched_rr" "expect_info_smp1_rr.out"
-test_one "SMP=4 LOG=info APP_FEATURES=sched_cfs" "expect_info_smp4_cfs.out"
-```
 
 通过上面的任务对`axtask`以及`axalloc`的功能进行初步的介绍，接下来将通过ArceOS提供的`yield`app来阐明与实现协作式多任务相关的crates。
 
@@ -1049,6 +1043,7 @@ VA = PA + 固定偏移
 
 ### 2.1 axhal
 axhal 位于操作系统与硬件之间，旨在提供一种标准化的接口，以简化不同硬件设备之间的交互和管理。axhal 中与 LoongArch 有关的内容如下：
+```
 .
 ├── build.rs
 ├── Cargo.toml
@@ -1084,10 +1079,12 @@ axhal 位于操作系统与硬件之间，旨在提供一种标准化的接口�
     │       └── time.rs
     ├── time.rs
     └── trap.rs
+```
+arch/loongarch64中的内容将在下文陆续进行介绍，本章重点介绍platform中的内容。
 
 ### 2.2 platform模块
 
-**首先在axconfig中对计算机系统的硬件参数和属性进行配置**。在modules/axconfig/src/platform/qemu-virt-loongarch64.toml中描述如下：
+首先需要在axconfig中对计算机系统的硬件参数和属性进行配置。在 modules/axconfig/src/platform/qemu-virt-loongarch64.toml 中描述如下：
 
 ```rust
 # Architecture identifier.
@@ -1132,34 +1129,25 @@ timer_frequency = "1_000_000_000"   # 1.0GHz
 
 这些配置参数在构建和配置计算机系统时使用，QEMU模拟特定硬件平台时需要进行这些配置参数进行初始化。
 
-接下来是在modules/axhal/src/platform/qemu_virt_loongarch64文件夹中具体配置qemu平台，文件夹内容如下：
+接下来介绍modules/axhal/src/platform/qemu_virt_loongarch64文件夹中的内容：
 
-
-其中，
-
-1、**boot.rs**中定义了一个启动程序的入口点函数 `_start()`，其中包含了一些汇编代码块。该代码的目的是在启动程序的入口点进行一些底层设置和初始化操作，然后将控制权转移到 Rust 代码
-
-2、**apic.rs**主要作用是初始化中断相关的硬件（local APIC 和 I/O APIC）以及提供一些中断处理相关的函数。其中使用了一些外部的模块和结构体来完成相应的功能。
-
-一个典型的 PIC 中断由下述步骤完成：①PIC 控制器向系统发送 PIC 中断请求；②系统向 PIC 控制器发送中断向量查询；③PIC 控制器向系统发送中断向量号；④系统清除 PIC 控制器上的对应中断。只有上述 4 步都完成后，PIC 控制器才会对系统发出下一个中断。对于龙芯 3A5000 HyperTransport 控制器，将自动进行前 3 步的处理，并将 PIC 中断向量写入256 个中断向量中的对应位置。而软件系统在处理了该中断之后，需要进行第 4 步处理，即向 PIC 控制器发出清中断。之后开始下一个中断的处理过程。
-
-PIC 只用于单处理器，对于如今的多核多处理器时代，PIC 无能为力，所以出现了更高级的中断控制器 APIC，**APIC 分成两部分 LAPIC 和 IOAPIC，前者 LAPIC 位于 CPU 内部，每个 CPU 都有一个 LAPIC，后者 IOAPIC 与外设相连**。外设发出的中断信号经过 IOAPIC 处理之后发送某个或多个 LAPIC，再由 LAPIC 决定是否交由 CPU 进行实际的中断处理。
+1、**boot.rs**中定义了一个启动程序的入口点函数 `_start()`和多核的启动代码`_start_secondary()`，主要作用是在系统启动时设置硬件环境、初始化内存管理单元（MMU）和一些控制寄存器，并启动主核和辅助核。
 
 3、**console.rs**实现了一个基于 UART 16550 的串口通信模块。这段代码实现了对 UART 16550 的基本操作，包括初始化、发送和接收数据等功能。它提供了向控制台输出和从控制台读取数据的接口，并使用自旋锁来确保多线程环境下的互斥访问。
 
-4、**irq.rs**实现了对外部中断（IRQ）的处理，其中涉及到了 PLIC（Platform-Level Interrupt Controller）。它提供了注册中断处理程序、启用或禁用中断、调度中断等功能。其中，定时器中断使用了懒初始化的方式进行处理。此外，代码中还涉及到了中断使能的设置和对 PLIC 的操作（TODO 注释部分），但具体的 PLIC 操作实现并未提供，后续需要补充。
+4、**irq.rs**主要是初始化LoongArch架构上的中断控制器和中断处理，set_enable函数可以根据向量号启用某个中断；register_handler函数可以注册某个中断向量的处理函数；dispatch_irq函数在收到中断时，会根据向量号在处理函数表里查找并调用对应的处理函数；init_primary函数在初始化阶段会禁止中断，配置定时器中断，并调用外部中断控制器的初始化函数。
 
 5、**mem.rs**代码中，主要关注的是 `memory_region_at` 函数。在函数中，首先使用 `core::cmp::Ordering` 比较索引与 `common_memory_regions_num()` 的大小关系。如果索引小于 `common_memory_regions_num()`，则调用 `common_memory_region_at(idx)` 函数获取相应的物理内存区域信息。如果索引等于 `common_memory_regions_num()`，则表示是自定义的物理内存区域，使用 `extern "C"` 定义的 `ekernel` 符号获取起始地址，并根据 `axconfig::PHYS_MEMORY_END` 定义的结束地址创建一个自由内存区域。最后，根据获取到的起始地址、大小、标志和名称创建一个 `MemRegion` 结构，并返回该结构。总结起来，这段代码提供了获取物理内存区域数量以及根据索引获取对应物理内存区域的功能。其中，除了预定义的物理内存区域外，还提供了一个自由内存区域，该区域的起始地址由 `ekernel` 符号给出，结束地址由 `axconfig::PHYS_MEMORY_END` 定义。
 
-6、**misc.rs**创建了一个无限循环，以模拟系统的关闭，并通过不可达代码来表示系统应该已经关闭。在实际应用中，可能会在循环中执行一些系统关闭的操作，例如发送关闭信号、保存状态等，然后才陷入无限循环状态。这里的代码仅仅是一个示例，实际的系统关闭逻辑需要根据具体的需求来实现。
+6、**misc.rs**创建了一个无限循环，以模拟系统的关闭，并通过不可达代码来表示系统应该已经关闭。
 
-7、**mod.rs**定义了一个模块与平台初始化相关的函数和外部函数，并导入了其他模块 `boot`、`console`、`mem`、`misc` 和 `time`。还定义了一个外部函数 `trap_vector_base`、`rust_main` 和 `rust_main_secondary`（如果启用了 "smp" 特性）。
+7、**mod.rs**定义了一个模块与平台初始化相关的函数和外部函数，并导入了其他模块 `boot`、`console`、`mem`、`misc` 和 `time`。还定义了一个外部函数 `trap_vector_base`、`rust_main` 和 `rust_main_secondary`。
 
-8、**mp.rs**定义了一个函数 `start_secondary_cpu`，用于启动给定的次要 CPU，并设置它的引导栈。
+8、**mp.rs**定义了一个函数 `start_secondary_cpu`，用于启动多核。
 
-9、**time.rs**定义了与定时器相关的函数和常量，并提供了一些辅助函数来进行时钟周期和纳秒数的转换。同时，还定义了平台初始化相关的函数，用于设置定时器和进行校准等工作。具体的实现需要在其他地方提供。
+9、**time.rs**定义了与定时器相关的函数和常量，并提供了一些辅助函数来进行时钟周期和纳秒数的转换。同时，还定义了平台初始化相关的函数，用于设置定时器和进行校准等工作。
 
-**最后，在modules/axhal/src/platform/mod.rs中使用`cfg_if`宏**，该宏可以根据条件选择执行不同的代码块。
+最后，在modules/axhal/src/platform/mod.rs中使用`cfg_if`宏，该宏可以根据条件选择执行不同的代码块。
 
 ```rust
 if #[cfg(all(
