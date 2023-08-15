@@ -524,7 +524,18 @@ graph TD;
 
 讲解完这两个基本概念，回到动态分配内存这个主题上，根据之前分类的标准，很容易发现动态分配特性是属于系统无关的，基于之前的调用依赖图，我们可以将其更新为如下图所示：
 
-![image-20230815113811936](image-20230815113811936.png)
+```mermaid
+graph TD
+	Client-->|features|helloworld
+    helloworld-->|features|modules;
+    subgraph modules;
+    axruntime-->axhal;
+    end
+    modules-->crates;
+    subgraph crates;
+    allocator;
+    end
+```
 
 这里我们简化了一下，没有涉及到其他辅助类的模块的展示，只展示了必要的功能依赖链。
 
