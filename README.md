@@ -392,7 +392,7 @@ make ARCH=loongarch64 A=apps/helloworld run LOG=debug
 ```
 
 运行结果如下图，下面的调试输出信息绿色字体部分可以为直观地展示 axruntime 做的一些初始化的工作。
-![Alt text](<image/image-2023-08-15 20.06.16.png>)
+<img src="image/image-2023-08-15 20.06.16.png" alt="Alt text" style="zoom:80%;" />
 
 有了这三个组件的支持，不仅能运行 helloworld 这样的简单程序，还能运行稍微复杂一些的程序。
 
@@ -403,7 +403,7 @@ make A=apps/task/yield ARCH=loongarch64 LOG=info SMP=1 run
 ```
 
 运行结果:
-![Alt text](<image/image-2023-08-15 20.10.09.png>)
+<img src="image/image-2023-08-15 20.10.09.png" alt="Alt text" style="zoom:80%;" />
 
 **运行过程分析**
 
@@ -415,12 +415,12 @@ make A=apps/task/yield ARCH=loongarch64 LOG=info SMP=1 run
 
 要初始化系统内核，例如完成页表、中断入口等功能的初始化。
 
-
 **Step 2**
 
 下面是 helloworld 程序的运行流程。
 
 ```mermaid
+%%{init: {'theme': 'default', 'flowchart': {'scale': 0.7}}}%%
 graph TD;
     A[main] --> B["libax::println!(Hello, world!)"];
     B --> C[libax:io::__print_impl];
@@ -434,6 +434,7 @@ graph TD;
 **step 2.1**
 
 ```mermaid
+%%{init: {'theme': 'default', 'flowchart': {'scale': 0.7}}}%%
 graph TD;
     T["stdout()"] --> A["libax::io::stdio.rs::stdout()"];
     A --> B["INSTANCE: Mutex<StdoutRaw> = Mutex::new(StdoutRaw)"];
@@ -447,6 +448,7 @@ graph TD;
 
 
 ```mermaid
+%%{init: {'theme': 'default', 'flowchart': {'scale': 0.7}}}%%
 graph TD;
     T["stdout().write_fmt(args)"] --> A["Stdout::write"];
     A --> B["self.inner.lock().write(buf)"];
@@ -550,7 +552,7 @@ make A=apps/helloworld ARCH=loongarch64 LOG=info run
 
 尝试运行一下，发现 info 以上级别的日志会被打印出来（提示：绿色字体所在行为 info 级别的日志信息）：
 
-![Alt text](<image/image-2023-08-15 20.38.18.png>)
+<img src="image/image-2023-08-15 20.38.18.png" alt="Alt text" style="zoom:80%;" />
 修改 log 日志等级：
 
 ```bash
@@ -742,6 +744,7 @@ make A=apps/task/yield ARCH=riscv64 LOG=info NET=y SMP=1 run
 启动yield的同时，实现了更加细节部分的调用，流程图如下：
 
 ```mermaid
+%%{init: {'theme': 'default', 'flowchart': {'scale': 0.8}}}%%
 graph TD;
     T["main task"] --> A["axtask::lib::spawn"];
     A -- "task_i" --> B["axtask::run_queue::AxRunqQueue.scheduler.push_back(tasak_i)"];
@@ -1915,9 +1918,9 @@ LoongArch架构下支持三种存储访问类型，分别是：一致可缓存�
 
 处理器的存储管理部件（Memory Management Unit，简称 MMU）支持虚实地址转换、多进程空间等功能，是通用处理器体现 “通用性” 的重要单元，也是处理器和操作系统交互最紧密的部分。存储管理构建虚拟的内存地址，并通过 MMU 进行虚拟地址到物理地址的转换。存储管理的作用和意义包括以下方面。
 
-- 隐藏和保护：用户态程序只能访问受限内存区域的数据，其他区域只能由核心态程序访问。引入存储管理后，不同程序仿佛在使用独立的内存区域，互相之间不会影响。此外，分页的存储管理方法对每个页都有单独的写保护，核心态的操作系统可防止用户程序随意修改自己的代码段
-- 为程序分配连续的内存空间：MMU 可以由分散的物理页构建连续的虚拟内存空间，以页为单元管理物理内存分配
-- 扩展地址空间：在 32 位系统中，如果仅采用线性映射的虚实地址映射方式，则至多访问4GB 物理内存空间，而通过 MMU 进行转换则可以访问更大的物理内存空间
+- 隐藏和保护：用户态程序只能访问受限内存区域的数据，其他区域只能由核心态程序访问。引入存储管理后，不同程序仿佛在使用独立的内存区域，互相之间不会影响。此外，分页的存储管理方法对每个页都有单独的写保护，核心态的操作系统可防止用户程序随意修改自己的代码段。
+- 为程序分配连续的内存空间：MMU 可以由分散的物理页构建连续的虚拟内存空间，以页为单元管理物理内存分配。
+- 扩展地址空间：在 32 位系统中，如果仅采用线性映射的虚实地址映射方式，则至多访问4GB 物理内存空间，而通过 MMU 进行转换则可以访问更大的物理内存空间。
 - 节约物理内存：程序可以通过合理的映射来节约物理内存。当操作系统中有相同程序的多个副本在同时运行时，让这些副本使用相同的程序代码和只读数据是很直观的空间优化措施，而通过存储管理可以轻松完成这些。此外，在运行大型程序时，操作系统无须将该程序所需的所有内存都分配好，而是在确实需要使用特定页时再通过存储管理的相关异常处理来进行分配，这种方法不但节约了物理内存，还能提高程序初次加载的速度。
 
 为了提高页表访问的速度，现代处理器中通常包含一个转换后援缓冲器（TranslationLookasideBuffer，简称 TLB）来实现快速的虚实地址转换。TLB 也称页表缓存或快表，借由局部性原理，存储当前处理器中最经常访问页的页表。一般 TLB 访问与 Cache 访问同时进行，而 TLB 也可以被视为页表的 Cache。TLB 中存储的内容包括虚拟地址、物理地址和保护位，可分别对应于 Cache 的Tag、Data 和状态位。
@@ -1999,7 +2002,7 @@ LoongArch处理器与risc-v处理器不同之处在于risc-v是根据satp寄存�
 
 因此除了四级页表外，如果设置页大小不同，那么得到的多级页表页不相同，但总体而言，多级页表的格式如下:
 
-![image-20230813204241435](image/image-20230813204241435.png)
+<img src="image/image-20230813204241435.png" alt="image-20230813204241435"  />
 
 
 ### 4.4 多级页表实现
