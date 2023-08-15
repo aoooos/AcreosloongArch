@@ -4,7 +4,7 @@
 
 ## 1 项目简介
 
-本文档作为Arceos的LoongArch版本介绍，对于硬件无关的内容，本文档只会介绍一些抽象细节和思路。文档组织结构为，第一章对Arceos和LoongArch做一个简单介绍并提供一个在Ubuntu下搭建一个LoongArch的交叉编译环境的方法（可参考https://github.com/aoooos）。后续章节将对应于Arceos的各个功能模块。
+本文档作为ArceOS的LoongArch版本介绍，对于硬件无关的内容，本文档只会介绍一些抽象细节和思路。文档组织结构为，第一章对ArceOS和LoongArch做一个简单介绍并提供一个在Ubuntu下搭建一个LoongArch的交叉编译环境的方法（可参考https://github.com/aoooos）。后续章节将对应于ArceOS的各个功能模块。
 
 ### 1.1 ArceOS介绍
 
@@ -33,13 +33,13 @@
 
 为了更好的理解Unikernel，我们对 Unikernel（单一内核）、 Micro Kernel（微内核）、Monolithic Kernel（宏内核）进行对比。
 
-|          | Unikernel（单一内核）                                        | Micro Kernel（微内核）                                       | Monolithic Kernel（宏内核）                                  |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 架构     | 将应用程序、操作系统内核、必要的组件紧密集成在一起，以创建一个高度定制化和最小化的镜像。 | 采用模块化设计，将操作系统的核心功能最小化，额外的功能和服务实现为用户空间的服务模块。 | 将各种功能和服务集成到一个单体内核中，如进程管理、内存管理、文件系统、网络协议栈等。 |
-| 功能分配 | 包含应用程序所需的最小化操作系统功能和库。                   | 包含基本的操作系统功能，如进程管理、内存管理和进程间通信，而其他功能如文件系统、网络协议栈等被实现为用户空间的服务模块。 | 包含大量的功能和服务，这些功能和服务直接运行在内核空间，具有较高的集成性和内核级别的访问权限。 |
-| 性能     | 镜像小，启动速度快，没有额外的组件和系统调用，具有更高的性能和较低的资源消耗。 | 将功能模块化并移至用户空间，其性能相对较低。模块之间需要进行消息传递和系统调用，会引入额外的开销。 | 内核和服务的紧密集成，有较高的性能                           |
-| 特权级   | 同一地址空间同一特权级。                                     | 只有进程管理和进程间通信在内核态                             | 所有硬件操作在内核态                                         |
-| 代表系统 | ArceOS、Unikraft、MirageOS、IncludeOS                        | QNX、MINIX、L4微内核系列                                     | Linux、Windows                                               |
+|          | Unikernel（单一内核）                                                                    | Micro Kernel（微内核）                                                                                                   | Monolithic Kernel（宏内核）                                                                    |
+| -------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| 架构     | 将应用程序、操作系统内核、必要的组件紧密集成在一起，以创建一个高度定制化和最小化的镜像。 | 采用模块化设计，将操作系统的核心功能最小化，额外的功能和服务实现为用户空间的服务模块。                                   | 将各种功能和服务集成到一个单体内核中，如进程管理、内存管理、文件系统、网络协议栈等。           |
+| 功能分配 | 包含应用程序所需的最小化操作系统功能和库。                                               | 包含基本的操作系统功能，如进程管理、内存管理和进程间通信，而其他功能如文件系统、网络协议栈等被实现为用户空间的服务模块。 | 包含大量的功能和服务，这些功能和服务直接运行在内核空间，具有较高的集成性和内核级别的访问权限。 |
+| 性能     | 镜像小，启动速度快，没有额外的组件和系统调用，具有更高的性能和较低的资源消耗。           | 将功能模块化并移至用户空间，其性能相对较低。模块之间需要进行消息传递和系统调用，会引入额外的开销。                       | 内核和服务的紧密集成，有较高的性能                                                             |
+| 特权级   | 同一地址空间同一特权级。                                                                 | 只有进程管理和进程间通信在内核态                                                                                         | 所有硬件操作在内核态                                                                           |
+| 代表系统 | ArceOS、Unikraft、MirageOS、IncludeOS                                                    | QNX、MINIX、L4微内核系列                                                                                                 | Linux、Windows                                                                                 |
 
 
 
@@ -54,8 +54,8 @@
 - 如果OS信任APP，那么没有必要建立特权级隔离，这样可以减少特权级上下文切换和不同特权级间数据拷贝的性能开销。
 - 如果支持单应用，那么多个地址空间在单个应用程序域中的用处不大，反而会带来性能开销。
 - 如果支持功能有限的应用，那么与此无关的的内核功能模块也是没有必要的，这样可以减少内核的体积，减少内核启动时间。
-- 传统操作系统通用性的设计会引入不必要的开销，如虚拟文件系统的通用表示对应网络应用引入了不必要的过长执行路径。
-- 对应不同应用的需求可以采用不同的内核功能模块，如不同的内存分配算法/调度算法等，以提高整体性能。
+- 传统操作系统通用性的设计会引入不必要的开销，如虚拟文件系统的通用表示对于网络应用引入了不必要的过长执行路径。
+- 对于不同应用的需求可以采用不同的内核功能模块，如不同的内存分配算法/调度算法等，以提高整体性能。
 
 **安全问题**
 
@@ -77,9 +77,9 @@ ArceOS在架构设计上，虽然目前的重点是基于unikernel架构，但�
 
 **开发问题**
 
-操作系统开发一直是一个比较困难的事情，我们看到的实际情况是操作系统（如Linux）随着时间的发展越来越庞大臃肿，难以维护和开发。我们认为将来的操作系统不是像现在统治世界的 Linux、Windows 那样庞大而通用，而是各种可以迅速组合形成的，并且功能丰富多彩的组件化定制操作系统，能够快速适配未来多种多样的处理器、加速器、外设和应用需求，在开发的便捷性、性能和安全性等方面优于已有的通用操作系统。但如何设计组件化定制操作系统是一个需要深入思考的挑战性问题。为此我们一直在思考能否通过基于泛型的独立功能组件来快速构建各种领域专用的OS。
+操作系统开发一直是一个比较困难的事情，实际情况是操作系统（如Linux）随着时间的发展越来越庞大臃肿，难以维护和开发。将来的操作系统可能不是像现在统治世界的 Linux、Windows 那样庞大而通用，而是各种可以迅速组合形成的，并且功能丰富多彩的组件化定制操作系统，能够快速适配未来多种多样的处理器、加速器、外设和应用需求，在开发的便捷性、性能和安全性等方面优于已有的通用操作系统。但如何设计组件化定制操作系统是一个需要深入思考的挑战性问题。为此ArceOS的开发者们一直在思考能否通过基于泛型的独立功能组件来快速构建各种领域专用的OS。
 
-我们认为开发操作系统的痛点是开发者编写操作系统软件很繁琐，需要关注的细节太多。其根本原因是操作系统内部模块广泛的相互依赖带来的软件复杂性，以及操作系统的自包含性带来的软件不可重用性。我们需要把操作系统看出是一个多层次的软件栈，分析操作系统中各个功能的层次划分，各个功能模块具有独立性，从而形成面向操作系统的层次化软件开发方法。
+开发操作系统的痛点是开发者编写操作系统软件很繁琐，需要关注的细节太多。其根本原因是操作系统内部模块广泛的相互依赖带来的软件复杂性，以及操作系统的自包含性带来的软件不可重用性。我们需要把操作系统看出是一个多层次的软件栈，分析操作系统中各个功能的层次划分，各个功能模块具有独立性，从而形成面向操作系统的层次化软件开发方法。
 
 **ArceOS的设计原则**
 
@@ -87,12 +87,12 @@ ArceOS在架构设计上，虽然目前的重点是基于unikernel架构，但�
 
 - 单体执行：应用与内核形成一个整体，运行在裸机或虚拟机上。
 - 单地址空间：主要针对单个应用程序方案，不同的应用程序通过共享内存或网络通信交互。
-- 但保护域：应用程序与内核运行在同一特权级，应用程序可以直接访问内核的数据结构和硬件资源。
+- 单保护域：应用程序与内核运行在同一特权级，应用程序可以直接访问内核的数据结构和硬件资源。
 - 与OS无关的内核功能组件：形成广泛的内核功能组件，可在没有OS的情况下独立运行和测试。
 - 与硬件无关的内核功能组件：形成广泛的内核功能组件，可在不同的硬件平台上运行。
 - 支持Linux ABI：支持Linux应用程序运行。
 - 支持Rust std库：支持Rust应用程序运行。
-- 架构可扩展：除了单体内核架构，也可扩展威微内核架构和宏内核架构。
+- 架构可扩展：除了单体内核架构，也可扩展为微内核架构和宏内核架构。
 
 简而言之，ArceOS是一个基于Rust语言的Unikernel，它的目标是为云计算平台提供一种高性能、高可靠、高安全、易开发的操作系统解决方案。ArceOS的设计思路是将操作系统的核心功能和应用程序紧密集成在一起，形成一个单一的可执行镜像，这个镜像包含了应用程序所需的所有功能组件，包括网络协议、文件系统和设备驱动等。而组成ArceOS的功能组件是可以独立存在的，并可以与其它功能组件组合，形成新的领域操作系统内核。
 
@@ -106,8 +106,8 @@ ArceOS 是一个开源的、组件化的Unikernel。以组合组件库的方式�
 
 具有一下特点和功能:
 
-- CPU架构: x86_64, riscv64, aarch64
-- 运行平台: QEMU pc-q35 (x86_64), virt (riscv64/aarch64)
+- CPU架构: x86_64, riscv64, aarch64, loongarch64
+- 运行平台: QEMU pc-q35 (x86_64), virt (riscv64/aarch64/loongarch64)
 - 支持多线程: Multi-thread
 - 调度算法: FIFO/RR/CFS scheduler
 - 虚拟IO: VirtIO net/blk/gpu drivers
@@ -126,29 +126,29 @@ ArceOS 是一个开源的、组件化的Unikernel。以组合组件库的方式�
 
 **Applications (Rust)**
 
-| App                                                          | Extra modules                    | Enabled features                          | Description                                                  |
-| ------------------------------------------------------------ | -------------------------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| [helloworld](https://github.com/aoooos/arceos/tree/main/apps/helloworld) |                                  |                                           | A minimal app that just prints a string                      |
-| [exception](https://github.com/aoooos/arceos/tree/main/apps/exception) |                                  | paging                                    | Exception handling test                                      |
-| [memtest](https://github.com/aoooos/arceos/tree/main/apps/memtest) | axalloc                          | alloc, paging                             | Dynamic memory allocation test                               |
-| [display](https://github.com/aoooos/arceos/tree/main/apps/display) | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                             |
-| [yield](https://github.com/aoooos/arceos/tree/main/apps/task/yield) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo      | Multi-threaded yielding test                                 |
-| [parallel](https://github.com/aoooos/arceos/tree/main/apps/task/parallel) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Parallel computing test (to test synchronization & mutex)    |
-| [sleep](https://github.com/aoooos/arceos/tree/main/apps/task/sleep) | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Thread sleeping test                                         |
-| [priority](https://github.com/aoooos/arceos/tree/main/apps/task/priority) | axalloc, axtask                  | alloc, paging, multitask, sched_cfs       | Thread priority test                                         |
-| [shell](https://github.com/aoooos/arceos/tree/main/apps/fs/shell) | axalloc, axdriver, axfs          | alloc, paging, fs                         | A simple shell that responds to filesystem operations        |
+| App                                                                          | Extra modules                    | Enabled features                          | Description                                                             |
+| ---------------------------------------------------------------------------- | -------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| [helloworld](https://github.com/aoooos/arceos/tree/main/apps/helloworld)     |                                  |                                           | A minimal app that just prints a string                                 |
+| [exception](https://github.com/aoooos/arceos/tree/main/apps/exception)       |                                  | paging                                    | Exception handling test                                                 |
+| [memtest](https://github.com/aoooos/arceos/tree/main/apps/memtest)           | axalloc                          | alloc, paging                             | Dynamic memory allocation test                                          |
+| [display](https://github.com/aoooos/arceos/tree/main/apps/display)           | axalloc, axdisplay               | alloc, paging, display                    | Graphic/GUI test                                                        |
+| [yield](https://github.com/aoooos/arceos/tree/main/apps/task/yield)          | axalloc, axtask                  | alloc, paging, multitask, sched_fifo      | Multi-threaded yielding test                                            |
+| [parallel](https://github.com/aoooos/arceos/tree/main/apps/task/parallel)    | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Parallel computing test (to test synchronization & mutex)               |
+| [sleep](https://github.com/aoooos/arceos/tree/main/apps/task/sleep)          | axalloc, axtask                  | alloc, paging, multitask, sched_fifo, irq | Thread sleeping test                                                    |
+| [priority](https://github.com/aoooos/arceos/tree/main/apps/task/priority)    | axalloc, axtask                  | alloc, paging, multitask, sched_cfs       | Thread priority test                                                    |
+| [shell](https://github.com/aoooos/arceos/tree/main/apps/fs/shell)            | axalloc, axdriver, axfs          | alloc, paging, fs                         | A simple shell that responds to filesystem operations                   |
 | [httpclient](https://github.com/aoooos/arceos/tree/main/apps/net/httpclient) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple client that sends an HTTP request and then prints the response |
-| [echoserver](https://github.com/aoooos/arceos/tree/main/apps/net/echoserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded TCP server that reverses messages sent by the client |
-| [httpserver](https://github.com/aoooos/arceos/tree/main/apps/net/httpserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded HTTP server that serves a static web page   |
-| [udpserver](https://github.com/aoooos/arceos/tree/main/apps/net/udpserver) | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple echo server using UDP protocol                      |
+| [echoserver](https://github.com/aoooos/arceos/tree/main/apps/net/echoserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded TCP server that reverses messages sent by the client   |
+| [httpserver](https://github.com/aoooos/arceos/tree/main/apps/net/httpserver) | axalloc, axdriver, axnet, axtask | alloc, paging, net, multitask             | A multi-threaded HTTP server that serves a static web page              |
+| [udpserver](https://github.com/aoooos/arceos/tree/main/apps/net/udpserver)   | axalloc, axdriver, axnet         | alloc, paging, net                        | A simple echo server using UDP protocol                                 |
 
 **Applications (C)**
 
-| App                                                          | Extra modules           | Enabled features           | Description                                         |
-| ------------------------------------------------------------ | ----------------------- | -------------------------- | --------------------------------------------------- |
+| App                                                                        | Extra modules           | Enabled features           | Description                                         |
+| -------------------------------------------------------------------------- | ----------------------- | -------------------------- | --------------------------------------------------- |
 | [helloworld](https://github.com/aoooos/arceos/tree/main/apps/c/helloworld) |                         |                            | A minimal C app that just prints a string           |
-| [memtest](https://github.com/aoooos/arceos/tree/main/apps/c/memtest) | axalloc                 | alloc, paging              | Dynamic memory allocation test in C                 |
-| [sqlite3](https://github.com/aoooos/arceos/tree/main/apps/c/sqlite3) | axalloc, axdriver, axfs | alloc, paging, fp_simd, fs | Porting of [SQLite3](https://sqlite.org/index.html) |
+| [memtest](https://github.com/aoooos/arceos/tree/main/apps/c/memtest)       | axalloc                 | alloc, paging              | Dynamic memory allocation test in C                 |
+| [sqlite3](https://github.com/aoooos/arceos/tree/main/apps/c/sqlite3)       | axalloc, axdriver, axfs | alloc, paging, fp_simd, fs | Porting of [SQLite3](https://sqlite.org/index.html) |
 
 #### 1.1.4 与具体 OS 无关的 crates
 
@@ -1080,7 +1080,7 @@ VA = PA + 固定偏移
 
 ## 2 Hello World
 
-在这一章中，介绍了如何进入使用Rust编写内核代码的世界以及在Arceos中helloworld的字符打印。此外，本章还将简单介绍rust编程语言中的两个很重要的特性，Trait和macro。
+在这一章中，介绍了如何进入使用Rust编写内核代码的世界以及在ArceOS中helloworld的字符打印。此外，本章还将简单介绍rust编程语言中的两个很重要的特性，Trait和macro。
 
 - Rust的裸机环境配置
 - qemu平台支持
@@ -1903,7 +1903,7 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame) {
 
 大致来看其与一般的函数调用是非常相似的，差别仅仅在于任务切换时会发生栈的替换。根据loongarch的寄存器规定，32个寄存器中被调用者保存寄存器为s0-s9,还需要保存ra与sp的值，因此任务上下文的定义如下:
 
-Arceos中关于Trap上下文的定义如下:
+ArceOS中关于Trap上下文的定义如下:
 
 ```rust
 pub struct TaskContext {
@@ -2754,7 +2754,7 @@ fn next_table_mut<'a>(&self, entry: &PTE) -> PagingResult<&'a mut [PTE]> {
 
 ### 5.6 地址空间（待写）
 
-在Arceos中，当开启页表机制后，内核代码与应用程序代码均需要通过地址转换，因此在开启页表前需要为内核构建好地址空间。但是在loongarch平台上，有了前文所述的直接映射窗口机制，就可以免去构建内核地址空间的工作，只为用户程序构建地址空间。
+在ArceOS中，当开启页表机制后，内核代码与应用程序代码均需要通过地址转换，因此在开启页表前需要为内核构建好地址空间。但是在loongarch平台上，有了前文所述的直接映射窗口机制，就可以免去构建内核地址空间的工作，只为用户程序构建地址空间。
 
 我们知道，内核与应用程序使用着BIOS提供的便利，直接访问着物理内存，因此应用程序就可以无视限制直接修改内存的内容。因此我们可以充分利用loongarch提供的直接映射窗口机制和页表对应用程序的内存访问做出限制，并且降低构建内核地址空间和应用地址空间的难度。
 
