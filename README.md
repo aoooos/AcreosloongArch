@@ -1069,7 +1069,6 @@ axhal 位于操作系统与硬件之间，旨在提供一种标准化的接口�
     ├── platform
     │   ├── mod.rs
     │   └── qemu_virt_loongarch64
-    │       ├── apic.rs
     │       ├── boot.rs
     │       ├── console.rs
     │       ├── irq.rs
@@ -1085,7 +1084,7 @@ axhal 位于操作系统与硬件之间，旨在提供一种标准化的接口�
 ```
 arch/loongarch64中的内容将在下文陆续进行介绍，本章重点介绍platform中的内容。
 
-### 2.2 platform模块
+### 2.2 platform
 
 首先需要在axconfig中对计算机系统的硬件参数和属性进行配置。在 modules/axconfig/src/platform/qemu-virt-loongarch64.toml 中描述如下：
 
@@ -1136,19 +1135,19 @@ timer_frequency = "1_000_000_000"   # 1.0GHz
 
 1、**boot.rs**中定义了一个启动程序的入口点函数 `_start()`和多核的启动代码`_start_secondary()`，主要作用是在系统启动时设置硬件环境、初始化内存管理单元（MMU）和一些控制寄存器，并启动主核和辅助核。
 
-3、**console.rs**实现了一个基于 UART 16550 的串口通信模块。这段代码实现了对 UART 16550 的基本操作，包括初始化、发送和接收数据等功能。它提供了向控制台输出和从控制台读取数据的接口，并使用自旋锁来确保多线程环境下的互斥访问。
+2、**console.rs**实现了一个基于 UART 16550 的串口通信模块。这段代码实现了对 UART 16550 的基本操作，包括初始化、发送和接收数据等功能。它提供了向控制台输出和从控制台读取数据的接口，并使用自旋锁来确保多线程环境下的互斥访问。
 
-4、**irq.rs**主要是初始化LoongArch架构上的中断控制器和中断处理，set_enable函数可以根据向量号启用某个中断；register_handler函数可以注册某个中断向量的处理函数；dispatch_irq函数在收到中断时，会根据向量号在处理函数表里查找并调用对应的处理函数；init_primary函数在初始化阶段会禁止中断，配置定时器中断，并调用外部中断控制器的初始化函数。
+3、**irq.rs**主要是初始化LoongArch架构上的中断控制器和中断处理，set_enable函数可以根据向量号启用某个中断；register_handler函数可以注册某个中断向量的处理函数；dispatch_irq函数在收到中断时，会根据向量号在处理函数表里查找并调用对应的处理函数；init_primary函数在初始化阶段会禁止中断，配置定时器中断，并调用外部中断控制器的初始化函数。
 
-5、**mem.rs**代码中，主要关注的是 `memory_region_at` 函数。在函数中，首先使用 `core::cmp::Ordering` 比较索引与 `common_memory_regions_num()` 的大小关系。如果索引小于 `common_memory_regions_num()`，则调用 `common_memory_region_at(idx)` 函数获取相应的物理内存区域信息。如果索引等于 `common_memory_regions_num()`，则表示是自定义的物理内存区域，使用 `extern "C"` 定义的 `ekernel` 符号获取起始地址，并根据 `axconfig::PHYS_MEMORY_END` 定义的结束地址创建一个自由内存区域。最后，根据获取到的起始地址、大小、标志和名称创建一个 `MemRegion` 结构，并返回该结构。总结起来，这段代码提供了获取物理内存区域数量以及根据索引获取对应物理内存区域的功能。其中，除了预定义的物理内存区域外，还提供了一个自由内存区域，该区域的起始地址由 `ekernel` 符号给出，结束地址由 `axconfig::PHYS_MEMORY_END` 定义。
+4、**mem.rs**代码中，主要关注的是 `memory_region_at` 函数。在函数中，首先使用 `core::cmp::Ordering` 比较索引与 `common_memory_regions_num()` 的大小关系。如果索引小于 `common_memory_regions_num()`，则调用 `common_memory_region_at(idx)` 函数获取相应的物理内存区域信息。如果索引等于 `common_memory_regions_num()`，则表示是自定义的物理内存区域，使用 `extern "C"` 定义的 `ekernel` 符号获取起始地址，并根据 `axconfig::PHYS_MEMORY_END` 定义的结束地址创建一个自由内存区域。最后，根据获取到的起始地址、大小、标志和名称创建一个 `MemRegion` 结构，并返回该结构。总结起来，这段代码提供了获取物理内存区域数量以及根据索引获取对应物理内存区域的功能。其中，除了预定义的物理内存区域外，还提供了一个自由内存区域，该区域的起始地址由 `ekernel` 符号给出，结束地址由 `axconfig::PHYS_MEMORY_END` 定义。
 
-6、**misc.rs**创建了一个无限循环，以模拟系统的关闭，并通过不可达代码来表示系统应该已经关闭。
+5、**misc.rs**创建了一个无限循环，以模拟系统的关闭，并通过不可达代码来表示系统应该已经关闭。
 
-7、**mod.rs**定义了一个模块与平台初始化相关的函数和外部函数，并导入了其他模块 `boot`、`console`、`mem`、`misc` 和 `time`。还定义了一个外部函数 `trap_vector_base`、`rust_main` 和 `rust_main_secondary`。
+6、**mod.rs**定义了一个模块与平台初始化相关的函数和外部函数，并导入了其他模块 `boot`、`console`、`mem`、`misc` 和 `time`。还定义了一个外部函数 `trap_vector_base`、`rust_main` 和 `rust_main_secondary`。
 
-8、**mp.rs**定义了一个函数 `start_secondary_cpu`，用于启动多核。
+7、**mp.rs**定义了一个函数 `start_secondary_cpu`，用于启动多核。
 
-9、**time.rs**定义了与定时器相关的函数和常量，并提供了一些辅助函数来进行时钟周期和纳秒数的转换。同时，还定义了平台初始化相关的函数，用于设置定时器和进行校准等工作。
+8、**time.rs**定义了与定时器相关的函数和常量，并提供了一些辅助函数来进行时钟周期和纳秒数的转换。同时，还定义了平台初始化相关的函数，用于设置定时器和进行校准等工作。
 
 最后，在modules/axhal/src/platform/mod.rs中使用`cfg_if`宏，该宏可以根据条件选择执行不同的代码块。
 
@@ -1176,14 +1175,14 @@ risc-v架构中，存在着定义于操作系统之下的运行环境。这个�
 
 **UEFI/BIOS**
 
-为了在Qemu上启动 LoongArch 的机器，需要一个UEFI启动器，因此在 qemu-loongarch-runenv目录下提供了此文件。UEFI bios装载内核时，会把从内核elf文件获取的入口点地址（可以用readelf -h或者-l vmlinux看到）抹去高32位使用。比如vmlinux链接的地址是0x9000000001034804，实际bios跳转的地址将是0x1034804，代码装载的位置也是物理内存0x1034804。BIOS这么做是因为它逻辑上相当于用物理地址去访问内存，高的虚拟地址空间没有映射不能直接用。
+为了在Qemu上启动 LoongArch 的机器，需要一个UEFI启动器，因此在platform目录下提供了此文件loongarch_bios_0310.bin或loongarch_bios_0310_debug.bin。UEFI bios装载内核时，会把从内核elf文件获取的入口点地址（可以用readelf -h或者-l vmlinux看到）抹去高32位使用。比如vmlinux链接的地址是0x9000000001034804，实际bios跳转的地址将是0x1034804，代码装载的位置也是物理内存0x1034804。BIOS这么做是因为它逻辑上相当于用物理地址去访问内存，高的虚拟地址空间没有映射不能直接用。
 
 内核启动入口代码需要做两件事：
 
 1. 设置一个直接地址映射窗口（参见LoongArch体系结构手册，5.2.1节），把内核用到的64地址抹去高位映射到物理内存。目前linux内核是设置0x8000xxxx-xxxxxxxx和0x9000xxxx-xxxxxxxx地址抹去最高的8和9为其物理地址，前者用于uncache访问(即不通过高速缓存去load/store)，后者用于cache访问。
 2. 做个代码自跳转，使得后续代码执行的PC和链接用的虚拟地址匹配。BIOS刚跳转到内核时，用的地址是抹去了高32位的地址（相当于物理地址），步骤1使得链接时的高地址可以访问到同样的物理内存，这里则换回到原始的虚拟地址。
 
-**在linux源代码中可以得到入口代码如下所示:**
+在linux源代码中可以得到入口代码如下所示:
 
 ```
 SYM_CODE_START(kernel_entry) # kernel entry point
