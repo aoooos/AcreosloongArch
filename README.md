@@ -1107,7 +1107,7 @@ VA = PA + 固定偏移
 
 <div STYLE="page-break-after: always;"></div>
 
-## 2 ArceOS for LoongArch
+## 2 LoongArch基础支持
 
 在这一章中，介绍了在loongarch上运行ArceOS的实现细节。
 
