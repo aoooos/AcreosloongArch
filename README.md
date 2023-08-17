@@ -182,6 +182,7 @@ Crates为Modules实现提供更底层的支持，是通用的基础库，与os�
 - kernel_guard: 利用RAII创建具有本地IRQ或禁用抢占的临界区，用于在内核中实现自旋锁。
 - lazy_init: 延迟初始化。
 - linked_list: 链表。
+- loongarch64: 提供loongarch64 cpu的接入支持。
 - memory_addr: 提供理物理和虚拟地址操作的辅助函数。
 - page_table: 页表。
 - page_table_entry: 页表项。
